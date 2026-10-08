@@ -1,0 +1,257 @@
+{
+ "slug": "exemplo-agentes-em-producao",
+ "pillar": "Implementação",
+ "caption_instagram": "Legenda de exemplo.",
+ "caption_linkedin": "Legenda de exemplo.",
+ "alt_text": "Fiorde ao entardecer.",
+ "photo_mood": "fiorde ao entardecer, luz baixa",
+ "slides": [
+  {
+   "layout": "cover",
+   "tag": "Em alta",
+   "eyebrow": "Agentes de IA nas empresas",
+   "title": "O piloto acabou.\nAgora é operação.",
+   "lead": "O que os dados desta semana mostram sobre levar agentes de IA para produção, e o que isso exige da arquitetura.",
+   "body": null,
+   "big": null,
+   "metrics": null,
+   "items": null,
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "source": null,
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "big_number",
+   "eyebrow": "Adoção",
+   "title": "A maioria ainda não passou do teste.",
+   "lead": null,
+   "body": "das empresas que testaram agentes de IA ainda não colocaram nenhum em produção.",
+   "big": "−62%",
+   "metrics": null,
+   "items": null,
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": "Fonte: exemplo de teste, 2026.",
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "line",
+   "eyebrow": "Custo",
+   "title": "O preço por token caiu. O uso subiu mais.",
+   "lead": null,
+   "body": "queda no custo médio por milhão de tokens em 24 meses.",
+   "big": "US$ 0,40",
+   "metrics": null,
+   "items": null,
+   "bars": null,
+   "series": [
+    {
+     "name": "Custo",
+     "values": [
+      10,
+      8,
+      6.5,
+      5,
+      3,
+      2.2,
+      1.4,
+      0.9,
+      0.4
+     ],
+     "highlight": true
+    },
+    {
+     "name": "Uso",
+     "values": [
+      2,
+      2.5,
+      3,
+      4,
+      5.2,
+      6,
+      7.5,
+      8.4,
+      9.6
+     ],
+     "highlight": false
+    }
+   ],
+   "x_labels": [
+    "2024",
+    "2026"
+   ],
+   "tag": null,
+   "source": "Fonte: exemplo de teste.",
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "illustration",
+   "eyebrow": "Arquitetura",
+   "title": "Onde o agente se conecta à operação.",
+   "lead": null,
+   "body": "O agente decide com dados dos sistemas que a empresa já usa, dentro das permissões definidas.",
+   "big": null,
+   "metrics": null,
+   "items": null,
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": null,
+   "visual_brief": "Fluxo da esquerda para a direita: sistemas da empresa alimentam o agente de IA (em foco), que respeita uma camada de permissões e entrega uma decisão.",
+   "visual_labels": [
+    "ERP e CRM",
+    "Agente de IA",
+    "Permissões",
+    "Decisão"
+   ]
+  },
+  {
+   "layout": "bars",
+   "eyebrow": "Mercado",
+   "title": "Investimento em infraestrutura de IA.",
+   "lead": "Bilhões de dólares por trimestre, cinco maiores provedores.",
+   "body": null,
+   "big": null,
+   "metrics": null,
+   "items": null,
+   "bars": [
+    {
+     "label": "T1",
+     "value": 52,
+     "display": "52",
+     "highlight": false
+    },
+    {
+     "label": "T2",
+     "value": 61,
+     "display": "61",
+     "highlight": false
+    },
+    {
+     "label": "T3",
+     "value": 70,
+     "display": "70",
+     "highlight": false
+    },
+    {
+     "label": "T4",
+     "value": 88,
+     "display": "US$ 88 bi",
+     "highlight": true
+    }
+   ],
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": "Fonte: exemplo de teste.",
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "metrics",
+   "eyebrow": "Operação",
+   "title": "Onde o ganho aparece primeiro.",
+   "lead": null,
+   "body": "Ganhos medidos em operações com integração completa, não em pilotos isolados.",
+   "big": null,
+   "metrics": [
+    {
+     "value": "−38%",
+     "label": "tempo de atendimento"
+    },
+    {
+     "value": "3×",
+     "label": "volume processado por pessoa"
+    },
+    {
+     "value": "+21%",
+     "label": "precisão na triagem"
+    }
+   ],
+   "items": null,
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": "Fonte: exemplo de teste.",
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "statement",
+   "eyebrow": "Leitura Atlas",
+   "title": "O gargalo é a integração.",
+   "lead": "Agentes geram valor quando acessam os sistemas que a empresa já opera, com permissão, rastreabilidade e custo previsível.",
+   "body": "Sem essa camada, o agente vira mais uma ferramenta isolada.",
+   "big": null,
+   "metrics": null,
+   "items": null,
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": null,
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "list",
+   "eyebrow": "O que fazer",
+   "title": "Quatro decisões antes do primeiro agente.",
+   "lead": null,
+   "body": null,
+   "big": null,
+   "metrics": null,
+   "items": [
+    {
+     "title": "Escolha um processo com dono.",
+     "text": "Um fluxo com começo, fim e métrica clara."
+    },
+    {
+     "title": "Mapeie os sistemas envolvidos.",
+     "text": "ERP, CRM e bases internas definem o que o agente pode fazer."
+    },
+    {
+     "title": "Defina permissões e trilha de auditoria.",
+     "text": "Segurança entra na arquitetura desde o início."
+    },
+    {
+     "title": "Meça custo por tarefa.",
+     "text": "Previsibilidade é o que permite escalar."
+    }
+   ],
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": null,
+   "visual_brief": null,
+   "visual_labels": null
+  },
+  {
+   "layout": "cta",
+   "eyebrow": "Obrigado por ler até aqui",
+   "title": "Agentes em produção começam com diagnóstico.",
+   "lead": "A Atlas coloca agentes de IA em produção com segurança e resultado medido.",
+   "body": null,
+   "big": null,
+   "metrics": null,
+   "items": null,
+   "bars": null,
+   "series": null,
+   "x_labels": null,
+   "tag": null,
+   "source": null,
+   "visual_brief": null,
+   "visual_labels": null
+  }
+ ]
+}

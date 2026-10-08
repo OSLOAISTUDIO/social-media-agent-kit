@@ -1,0 +1,80 @@
+# Pacote de marca: __NOME__
+# Modelo criado por scripts/new_brand.sh. Preencha tudo que está marcado PENDENTE e rode
+#   python -m scripts.check_brand __SLUG__
+# para ver o que falta. Exemplo completo e funcionando: brands/exemplo (empresa fictícia Atlas).
+
+[identity]
+name = "__NOME__"
+category = "PENDENTE"
+city = "PENDENTE"
+site = "PENDENTE"
+instagram = "PENDENTE"
+kicker = "PENDENTE"
+footer_tagline = "PENDENTE"
+cta_button = "Fale com a __NOME__ no link da bio →"
+editorial_standard = "PENDENTE"
+
+[voice]
+language_label = "PENDENTE"
+audience = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+tone = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+cover_example = "PENDENTE"
+style_rules = "PENDENTE"
+rules = [
+  'Nome da marca sempre "__NOME__".',
+  "Nunca cite cliente, contrato, valor ou métrica interna que não seja pública.",
+]
+
+[[pillars]]
+name = "PENDENTE"
+desc = "PENDENTE"
+[[pillars]]
+name = "PENDENTE"
+desc = "PENDENTE"
+[[pillars]]
+name = "PENDENTE"
+desc = "PENDENTE"
+[[pillars]]
+name = "PENDENTE"
+desc = "PENDENTE"
+
+[research]
+subject = "PENDENTE"
+priorities = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+hn_queries = ["marketing", "growth", "SaaS", "sales", "advertising", "SEO", "B2B"]
+news_br = ["marketing digital tendências", "vendas B2B", "Meta anúncios novidade"]
+news_us = ["marketing trends", "B2B sales", "SaaS growth"]
+
+[content]
+arcs = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+illustration_hint = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+
+[visual]
+# Cores da marca em #RRGGBB. PENDENTE: substituir pela identidade visual da empresa.
+paper = "#F7F6F3"
+ink = "#121212"
+accent = "#1C1C1C"
+surface = "#ECEAE5"
+overlay = "12,12,12"
+font_family = "Inter"                  # nome da família; troque pelo da fonte da marca
+font_regular = ""                      # ex.: "fonts/MinhaFonte-Regular.otf" (vazio = usa Inter/sistema)
+font_medium = ""                       # ex.: "fonts/MinhaFonte-Medium.otf"
+logo_light = "logo/logo-light.svg"
+logo_dark = "logo/logo-dark.svg"
+photo_mood = "PENDENTE"
+
+[illustration]
+reference = "style/illustration-reference.png"   # opcional; se não existir, gera só pelo texto
+style = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+
+[language]
+checks = ["travessao", "exclamacao"]
+banned = ["fórmula secreta", "hack", "guru", "gatilho mental", "explodir", "10x", "garantido"]
+brand_regex = ''   # opcional: regex de grafia errada do nome
+brand_regex_msg = ""
+
+[knowledge]
+root = "knowledge"
+core = ["marca.md"]
+skip_dirs = []
+files_description = "posicionamento, soluções e metodologia da marca"

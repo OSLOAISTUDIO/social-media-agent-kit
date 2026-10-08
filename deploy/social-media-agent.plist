@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Mantém o agente rodando no Mac (inicia no login e reinicia se cair).
+     Instalação: ver README, seção "Rodar sempre". -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.social-media-agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-c</string>
+    <string>exec "__PROJECT__/run.sh"</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/tmp/social-media-agent.out.log</string>
+  <key>StandardErrorPath</key><string>/tmp/social-media-agent.err.log</string>
+</dict>
+</plist>

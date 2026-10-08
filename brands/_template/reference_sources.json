@@ -1,0 +1,6 @@
+{
+  "_comment": "Criadores de conteúdo que a marca acompanha (opcional). YouTube: name, handle e channel_id (o ID começa com UC; aparece no código da página do canal). Instagram: name, username e limit. Listas vazias = pesquisa sem referências editoriais.",
+  "days": 14,
+  "youtube": [],
+  "instagram": []
+}
