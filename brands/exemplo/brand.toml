@@ -1,29 +1,26 @@
-# Pacote de marca de EXEMPLO: Atlas (empresa fictícia).
-# Serve para testar o kit logo depois de baixar (BRAND=exemplo) e como referência de preenchimento.
-# Para a sua empresa: ./scripts/new_brand.sh <slug> "<Nome>" e preencha o pacote novo.
+# Pacote de marca de EXEMPLO: Atlas (empresa fictícia), só para testes e prévia visual.
+# Não tem tema de conteúdo: o bot não roda com BRAND=exemplo. Para a sua empresa, rode
+# ./scripts/new_brand.sh <slug> "<Nome>" (ele pergunta o tema-macro) e preencha o pacote novo.
 
 [identity]
 name = "Atlas"
-category = "consultoria de gestão e inteligência artificial"
+category = "empresa fictícia de exemplo"
 city = "São Paulo, Brasil"
 site = "atlas.exemplo.com"
 instagram = "@atlas.exemplo"
 kicker = "Insights"
-footer_tagline = "Consultoria de gestão e IA"
+footer_tagline = "Empresa de exemplo"
 cta_button = "Fale com a Atlas no link da bio →"
-editorial_standard = "dados verificáveis, linguagem simples e foco no que muda na operação"
+editorial_standard = "dados verificáveis e linguagem simples"
 
 [voice]
 language_label = "tom de voz da Atlas"
-audience = '''donos de empresa, gestores e diretores no Brasil. Eles rolam o feed rápido: o post precisa
-parar o dedo no primeiro slide e entregar valor claro em poucos segundos.'''
-tone = '''viral sem ser vulgar ou apelativo.
-- Fale com o leitor ("você", "sua empresa"), em linguagem simples, como uma conversa inteligente.
-- Mostre o benefício concreto (tempo, dinheiro, resultado) antes de explicar como funciona.
-- Use curiosidade, contraste e números para criar gancho, sempre com verdade.
-- Corte jargão técnico; se precisar de um termo, explique em poucas palavras.
-- Nada de clickbait mentiroso, promessa falsa, sensacionalismo, caixa alta para gritar ou emoji.'''
-cover_example = "Novo recurso do ChatGPT: um assistente que organiza a semana do seu time sozinho."
+audience = '''o público da marca (exemplo). Ele rola o feed rápido: o post precisa parar o dedo no
+primeiro slide e entregar valor claro em poucos segundos.'''
+tone = '''claro, direto e útil.
+- Fale com o leitor ("você"), em linguagem simples.
+- Mostre o benefício antes do detalhe.'''
+cover_example = "Título de exemplo: o benefício principal em uma frase."
 style_rules = "Sem travessão (—), sem exclamação, sem emojis nas peças, sem adjetivos inflados."
 rules = [
   'Nome da marca sempre "Atlas".',
@@ -31,39 +28,23 @@ rules = [
 ]
 
 [[pillars]]
-name = "Diagnóstico"
-desc = "Onde a operação perde tempo e dinheiro hoje."
+name = "Pilar 1"
+desc = "Descrição curta do primeiro pilar."
 [[pillars]]
-name = "Implementação"
-desc = "Processos e ferramentas de IA funcionando no dia a dia."
+name = "Pilar 2"
+desc = "Descrição curta do segundo pilar."
 [[pillars]]
-name = "Treinamento"
-desc = "Equipes preparadas para usar IA com critério."
+name = "Pilar 3"
+desc = "Descrição curta do terceiro pilar."
 
 [research]
-subject = "IA, tecnologia e gestão"
-priorities = '''PRIORIDADE (nesta ordem):
-1. NOVIDADES: lançamentos e recursos novos de ferramentas que as empresas já podem usar
-   (IA generativa, automação, produtividade, gestão).
-2. APLICAÇÃO PRÁTICA: como usar a novidade no dia a dia de uma empresa, com exemplos concretos
-   por área (comercial, operações, atendimento, financeiro, RH).
-3. Dados, pesquisas e movimentos de mercado: entram como contexto ou tema quando forem fortes.
-
-Para novidades, a fonte primária é o anúncio oficial (blog, changelog, central de ajuda), com data.
-Inclua fontes brasileiras quando houver.'''
-hn_queries = ["AI", "LLM", "ChatGPT", "automation", "productivity", "launch"]
-news_br = ["inteligência artificial empresas", "ChatGPT novo recurso", "gestão produtividade"]
-news_us = ["AI new feature", "AI launch", "productivity tools"]
+subject = "tema de exemplo"
+short = "tema de exemplo"
+hn_queries = []
+news_br = []
+news_us = []
 
 [content]
-arcs = '''- Arco para NOVIDADE / APLICAÇÃO PRÁTICA: o que foi lançado (capa) → o que é e por que importa →
-  como funciona (ilustração) → aplicações práticas no dia a dia, com exemplos por área (list) →
-  limites e cuidados → o que muda para empresas → CTA.
-- Arco para DADOS / MERCADO: abertura (o fato) → contexto com dados → ilustração → o que muda
-  para empresas → o que fazer → CTA.
-- Aplicações práticas são específicas e acionáveis, nunca genéricas ("aumentar a produtividade").'''
-illustration_hint = '''no padrão visual da Atlas: isométrica, planos empilhados com profundidade
-  sutil, blocos na cor de acento com ícones brancos, rótulos numerados com linhas-guia.'''
 
 [visual]
 paper = "#FAFAF7"
@@ -76,11 +57,11 @@ font_regular = ""
 font_medium = ""
 logo_light = "logo/logo-light.svg"
 logo_dark = "logo/logo-dark.svg"
-photo_mood = "fotografia editorial de paisagem natural, luz suave, sem pessoas"
+photo_mood = "fotografia editorial, luz suave, sem pessoas"
 
 [illustration]
 reference = "style/illustration-reference.png"
-style = '''Premium editorial isometric illustration for a management and AI consultancy.
+style = '''Premium editorial isometric illustration.
 - Isometric exploded view: thin flat planes/cards stacked or arranged in depth, each with a subtle
   light grey-green side edge to show thickness, and a very soft, diffuse shadow beneath.
 - Line work: precise 1.5-2px strokes in deep green (#2F5D50) on off-white surfaces (#F7F7F4).
@@ -97,8 +78,8 @@ background, photo-realism, cartoon style, emojis, logos, watermarks, titles or c
 other than the exact labels listed.'''
 
 [language]
-checks = ["travessao", "exclamacao", "paralelismo", "dicotomia"]
-banned = ["revolucionári", "disruptiv", "mágic", "incrível", "game changer"]
+checks = []
+banned = []
 brand_regex = ''
 brand_regex_msg = ""
 
@@ -106,4 +87,4 @@ brand_regex_msg = ""
 root = "knowledge"
 core = ["marca.md"]
 skip_dirs = []
-files_description = "posicionamento, soluções e metodologia da Atlas"
+files_description = "documentos da marca de exemplo"

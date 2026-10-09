@@ -75,6 +75,10 @@ def _structure_problems(content: dict) -> list[str]:
                 "illustration": "visual_brief"}.get(sl["layout"])
         if need and not sl.get(need):
             p.append(f"slide {i} ({sl['layout']}) está sem '{need}'")
+    # Legendas não citam fontes (as fontes vão para o humano no Telegram).
+    for cap in ("caption_instagram", "caption_linkedin"):
+        if re.search(r"\bfontes?\s*:", content.get(cap) or "", re.I):
+            p.append(f"{cap} cita fonte: tire a fonte da legenda (ela aparece só na aprovação no Telegram)")
     # Regra fixa: todo post tem 1 slide de ilustração/diagrama no meio do carrossel.
     ill = [i for i, sl in enumerate(s) if sl["layout"] == "illustration"]
     if len(ill) != 1:

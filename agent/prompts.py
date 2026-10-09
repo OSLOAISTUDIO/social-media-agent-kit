@@ -53,7 +53,7 @@ _refs = _reference_names()
 REFERENCES_NOTE = (f"""
 Sobre as "Referências editoriais" acima ({_refs}): são criadores que a
 {BRAND_NAME} acompanha de perto. Considere SEMPRE o que eles publicaram nos últimos dias:
-- como sinal do que está em alta para o público brasileiro (o que eles cobriram com boa audiência
+- como sinal do que está em alta para o público da marca (o que eles cobriram com boa audiência
   tem prioridade);
 - como inspiração de pegada narrativa: gancho, formato prático, "o que dá para fazer com isso".
 Nunca copie títulos, roteiros ou textos deles, e não use o tom deles quando ele fugir da voz
@@ -61,23 +61,26 @@ Nunca copie títulos, roteiros ou textos deles, e não use o tom deles quando el
 """ if _refs else "")
 
 
-# Abertura do prompt de pesquisa: [research] scope no brand.toml substitui o padrão (curto prazo, viral).
-DEFAULT_SCOPE = ("Pesquise na web o que está em alta em " + R["subject"] + """ nos ÚLTIMOS 7 DIAS.
-
-Busque os assuntos com MAIS POTENCIAL VIRAL: o que está gerando conversa, compartilhamento e
-curiosidade agora (lançamentos de marcas grandes, novidades que mudam o dia a dia, comparativos,
-resultados surpreendentes). Os sinais de engajamento abaixo (views, curtidas, votos) mostram isso.""")
+# Abertura do prompt de pesquisa. O único foco padrão é o tema-macro da marca ([research] subject,
+# definido no setup); [research] scope substitui este texto.
+NEWS_DAYS = int(R.get("news_days", 7))
+DEFAULT_SCOPE = (f"Pesquise na web o que está em alta em {R['subject']} nos últimos {NEWS_DAYS} dias: "
+                 "os assuntos que estão gerando conversa e interesse no público da marca. Os sinais de "
+                 "engajamento abaixo (views, curtidas, votos, matérias) ajudam a medir isso.")
+DEFAULT_PRIORITIES = (f"PRIORIDADE: o que é novo, relevante e útil para o público da marca dentro de "
+                      f"{R['subject']}. Use fontes primárias com data e inclua fontes do país do público "
+                      "quando houver.")
 SCOPE = R.get("scope") or DEFAULT_SCOPE
 # Distribuição dos tipos de tema: [research] mix substitui a regra padrão.
 MIX = R.get("mix")
 TASK = ("Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco.\n" + esc(MIX)
         if MIX else
-        'Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco, com\n'
-        'pelo menos metade deles do tipo "Novidade" ou "Aplicação prática".')
+        "Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco, "
+        "variando os tipos de tema.")
 
 RESEARCH = esc(SCOPE) + """
 
-""" + esc(R["priorities"]) + """
+""" + esc(R.get("priorities") or DEFAULT_PRIORITIES) + """
 
 Sinais coletados automaticamente (volume de menções e engajamento):
 {signals}
@@ -93,18 +96,17 @@ necessário para sustentar cada um.
 Para cada um:
 - angle: Novidade, Aplicação prática, Tendência (movimento de médio prazo no setor), Dados e pesquisa ou Mercado.
 - why_now: por que o tema importa agora (datas, pesquisas, volume, repercussão).
-- data_points: 2 a 4 fatos verificáveis com URL da fonte primária (para novidades: o que foi
-  lançado, para quem, desde quando, limites; números quando houver).
+- data_points: 2 a 4 fatos verificáveis com URL da fonte primária (números e datas quando houver).
 - practical_uses: 2 a 4 aplicações práticas concretas no trabalho (o que alguém faz com isso amanhã).
 - narrative: a pegada narrativa do post (gancho da capa, formato, tom), inspirada no que funcionou
   nas referências editoriais, traduzida para a voz """ + esc(BRAND_NAME) + """; cite qual referência inspirou, se houver.
-- synopsis: o que o post vai trabalhar e qual leitura a """ + esc(BRAND_NAME) + """ traz (como aplicar e o que muda na
-  operação de uma empresa), 3 a 5 frases.
+- synopsis: o que o post vai trabalhar e qual leitura a """ + esc(BRAND_NAME) + """ traz (o que muda para o
+  público da marca), 3 a 5 frases.
 - outline: roteiro slide a slide (capa, 5 a 7 slides de conteúdo incluindo 1 ilustração, CTA).
 - pillar: exatamente um destes pilares da """ + esc(BRAND_NAME) + """: """ + esc("; ".join(PILLAR_NAMES)) + """.
-- scores: momentum (= potencial viral: quanto está gerando conversa e engajamento agora), novelty,
+- scores: momentum (= tração: quanto está gerando conversa e engajamento agora), novelty,
   relevance, ownability (0 a 10), com honestidade.
-Evite fofoca de mercado sem consequência prática para empresas."""
+Evite temas sem consequência prática para o público da marca."""
 
 
 CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado abaixo.
@@ -116,7 +118,7 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
 {design}
 
 # Layouts disponíveis
-- cover: SEMPRE o primeiro. tag (ex.: "Em alta", "Lançamento", "Novo dado"), eyebrow (assunto),
+- cover: SEMPRE o primeiro. tag (ex.: "Em alta", "Novo dado"), eyebrow (assunto),
   title (display, até ~45 caracteres, pode usar "\\n" para quebrar em 2 linhas), lead (até ~140 caracteres).
 - big_number: title (H2, até ~55 caracteres), big (número curto: "−29%", "3×", "US$ 4 bi"),
   body (o que o número significa, até ~120 caracteres), source.
@@ -127,25 +129,25 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
 - list: title, 3 ou 4 items (title até ~50 caracteres, text até ~90 caracteres). Bom para "o que fazer".
 - statement: title + lead (leitura da """ + esc(BRAND_NAME) + """, até ~200 caracteres) + body opcional. Uma ideia forte.
 - illustration: OBRIGATÓRIO, exatamente 1 por post, no meio do carrossel (nunca 1º, 2º, penúltimo
-  ou último). Torna o conteúdo visual: diagrama de fluxo/processo, arquitetura (sistemas conectados),
+  ou último). Torna o conteúdo visual: diagrama de fluxo/processo, estrutura em camadas,
   antes e depois, framework em etapas, matriz 2×2 ou linha do tempo. Campos: title (H2), visual_brief
   (o que a ilustração mostra, com riqueza: camadas ou blocos em vista isométrica, quais elementos
   têm destaque na cor de acento da marca, ícones de cada etapa, mini gráficos ou números quando ajudarem; 3 a 5 frases),
   visual_labels (3 a 5 rótulos laterais exatos em PT-BR, no máximo 3 palavras cada, um por camada/etapa),
   body opcional (legenda curta abaixo da imagem).
   A imagem é desenhada pelo ChatGPT Images 2 """ + esc(C.get("illustration_hint", "no padrão visual da marca.")) + """
-  Nunca peça pessoas, robôs, cérebros, circuitos ou cenas.
+  Nunca peça pessoas, rostos ou cenas fotográficas.
 - cta: SEMPRE o último. eyebrow "Obrigado por ler até aqui", title (convite para conhecer a """ + esc(BRAND_NAME) + """
   ligado ao tema, até ~60 caracteres), lead (como a """ + esc(BRAND_NAME) + """ ajuda nesse contexto, até ~140 caracteres).
   O template adiciona o botão \"""" + esc(I["cta_button"]) + """\" e os pilares da marca.
 
 # Copy dos slides (o mais importante)
-- Capa: título com gancho viral, benefício claro e nome da novidade quando houver
+- Capa: título com gancho forte e benefício claro para o público, no tom da marca
   (ex.: \"""" + esc(V["cover_example"]) + """\").
   Até ~70 caracteres, pode quebrar em 2 ou 3 linhas com "\n". Lead curto que aumenta a curiosidade.
 - Cada slide de conteúdo: título que se entende sozinho e prende (pergunta, contraste, resultado),
-  texto curto e simples. Prefira "o que você ganha" a "como a tecnologia funciona".
-- Escreva para leigos inteligentes: nada de siglas sem explicação, nada de parágrafo técnico.
+  texto curto e simples. Prefira o que o leitor ganha a detalhes técnicos.
+- Escreva com clareza: nada de siglas sem explicação, nada de parágrafo técnico.
 - Pouco texto por slide; o layout centraliza o conteúdo, então frases curtas ficam melhores.
 """ + ("- Regras de copy da marca (prevalecem sobre as genéricas desta seção):\n" + esc(COPY_RULES) + "\n"
        if COPY_RULES else "") + """
@@ -156,15 +158,17 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
 """ + esc(C.get("arcs", "")) + """
 - Todo slide com número precisa de "source" no formato "Fonte: Veículo, ano."
 - Use search_brand_files / read_brand_file se quiser trazer cases, metodologia ou oferta reais da """ + esc(BRAND_NAME) + """.
+- Se o tema tiver "_refs" (referências enviadas pelo humano), use SOMENTE essas referências: nenhum
+  dado, fato ou fonte de fora delas.
 
 # Legendas
-- caption_instagram: curta, direta, não preguiçosa, no tom viral sem apelação. 1 frase de abertura
-  que prende (benefício ou curiosidade), 2 a 4 frases simples com o dado central e o que isso muda
-  para o leitor, chamada final para o link da bio. Até 3 hashtags
-  específicas no fim. Fonte principal citada no texto ("Fonte: ...").
+- caption_instagram: curta, direta, não preguiçosa, no tom da marca. 1 frase de abertura
+  que prende (benefício ou curiosidade), 2 a 4 frases simples com a ideia central e o que isso muda
+  para o leitor, chamada final para o link da bio. Até 3 hashtags específicas no fim.
 - caption_linkedin: mesmo conteúdo, um pouco mais analítica (até ~1.200 caracteres),
   parágrafos curtos, termina convidando para conversar com a """ + esc(BRAND_NAME) + """ ({site}). Até 3 hashtags.
 - Nenhuma legenda com travessão, exclamação, emoji em excesso (no máximo 0), ou frase de pôster.
+- Legendas NÃO citam fontes nem links de fontes: as fontes vão para o humano na aprovação pelo Telegram.
 """ + ("- Regras de legenda da marca (prevalecem sobre as genéricas desta seção):\n" + esc(CAPTION_RULES) + "\n"
        if CAPTION_RULES else "")
 
@@ -181,16 +185,18 @@ aprovação humana. O padrão é ALTO: só aprove o que você publicaria no perf
 """ + ("# Regras de copy da marca (valem para os critérios 1, 2, 3, 5 e 7 e prevalecem sobre o padrão genérico)\n"
        + esc("\n".join(x for x in (COPY_RULES, CAPTION_RULES) if x)) + "\n\n"
        if COPY_RULES or CAPTION_RULES else "") + """# Critérios (nota 0 a 10 cada)
-1. Capa viral: o título faz parar o dedo em 2 segundos, traz o benefício ou a curiosidade e o nome
-   da novidade, sem ser apelativo ou mentiroso (padrão: \"""" + esc(V["cover_example"]) + """\").
+1. Capa: o título faz parar o dedo em 2 segundos e traz o benefício ou a curiosidade, sem ser
+   apelativo ou mentiroso (padrão: \"""" + esc(V["cover_example"]) + """\").
 2. Clareza e progressão: uma ideia por slide, sequência lógica, nada repetido, nada genérico.
 3. Utilidade prática: o leitor sai sabendo o que fazer com isso, com exemplos concretos.
 4. Precisão: todo número e fato bate com as fontes do tema; nada inventado; fontes nos slides com dado.
-5. Linguagem: simples e envolvente, sem jargão técnico, fala com "você"; respeita o """ + esc(V["language_label"]) + """
+   Se o tema tiver "_refs", qualquer fato de fora dessas referências reprova.
+5. Linguagem: segue o tom de voz da marca, clara, sem jargão desnecessário; respeita o """ + esc(V["language_label"]) + """
    (""" + esc(V.get("style_rules", "")) + """).
 6. Ilustração: o visual_brief descreve uma ilustração rica no padrão visual da marca (camadas, ícones,
    destaques na cor de acento) que explica algo de verdade, com 3 a 5 rótulos curtos e exatos.
-7. Legendas: abertura forte, dado central, leitura da """ + esc(BRAND_NAME) + """, chamada clara; LinkedIn mais analítica.
+7. Legendas: abertura forte, ideia central, leitura da """ + esc(BRAND_NAME) + """, chamada clara, sem citar fontes;
+   LinkedIn mais analítica.
 
 Se algum critério tiver nota abaixo de 8, approved=false e reescreva o post inteiro corrigindo
 todos os problemas (mantendo layouts válidos e o slide illustration no meio). Se todos tiverem 8
@@ -231,8 +237,9 @@ o post completo, igual no restante.
 
 
 INTENT = """Classifique a mensagem do humano para o agente de social media da """ + esc(BRAND_NAME) + """
-- new_post: pede um post novo sobre algum assunto (ex.: "faz um post sobre o lançamento X").
-- direction: dá direcionamento para a pesquisa da semana (ex.: "foca em agentes", "quero algo de regulação").
+- new_post: pede um post novo sobre algum assunto, ou envia um link, vídeo ou texto de referência
+  (ex.: "faz um post sobre X", "post sobre este vídeo: https://youtu.be/...").
+- direction: dá direcionamento para a pesquisa da semana (ex.: "foca em X", "quero algo sobre Y").
 - other: qualquer outra coisa.
 brief: o pedido limpo, em uma frase.
 
@@ -248,3 +255,28 @@ SCHEDULE = """Agora é {now} ({weekday}), fuso {tz}. O humano quer agendar uma p
 Converta para data e hora locais. Regras: "amanhã", dias da semana e datas sem ano referem-se ao
 futuro mais próximo; sem horário informado, use {default_time}; "manhã" = 09:00, "almoço" = 12:00,
 "tarde" = 15:00, "fim do dia"/"noite" = 18:00. Se não houver dia/horário reconhecível, ok=false."""
+
+
+RESEARCH_REFS = """O humano enviou as referências abaixo (links, vídeos e/ou texto). Use SOMENTE estas
+referências como base e como fonte: não pesquise nem cite outras fontes e não traga dados de fora delas.
+{web_note}
+
+# Pedido do humano
+{request}
+
+# Conteúdo das referências
+{references}
+
+Tarefa: devolva exatamente {n} candidatos, ângulos diferentes para um post baseado nessas referências.
+Para cada um:
+- angle: Novidade, Aplicação prática, Tendência, Dados e pesquisa ou Mercado (o que melhor descreve o ângulo).
+- why_now: por que este conteúdo importa para o público da marca agora.
+- data_points: 2 a 4 fatos tirados das referências; source_url = o link de onde saiu (para texto colado
+  pelo humano, use "texto enviado").
+- practical_uses: 2 a 4 aplicações práticas concretas para o público da marca.
+- narrative: a pegada narrativa do post (gancho da capa, formato, tom), na voz """ + esc(BRAND_NAME) + """.
+- synopsis: o que o post vai trabalhar e qual leitura a """ + esc(BRAND_NAME) + """ traz, 3 a 5 frases.
+- outline: roteiro slide a slide (capa, 5 a 7 slides de conteúdo incluindo 1 ilustração, CTA).
+- pillar: exatamente um destes pilares da """ + esc(BRAND_NAME) + """: """ + esc("; ".join(PILLAR_NAMES)) + """.
+- sources: SOMENTE as referências enviadas (nome = título do link ou do vídeo; url = o link enviado).
+- scores: momentum, novelty, relevance, ownability (0 a 10), com honestidade."""

@@ -8,3 +8,4 @@ python-dotenv>=1.0
 feedparser>=6.0
 tzdata>=2024.1
 pillow>=10.4
+youtube-transcript-api>=1.2

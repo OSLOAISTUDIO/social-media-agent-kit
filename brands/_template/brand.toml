@@ -39,30 +39,32 @@ name = "PENDENTE"
 desc = "PENDENTE"
 
 [research]
-subject = "PENDENTE"
-priorities = '''PENDENTE (ver o exemplo em brands/exemplo)'''
-hn_queries = ["marketing", "growth", "SaaS", "sales", "advertising", "SEO", "B2B"]
-news_br = ["marketing digital tendências", "vendas B2B", "Meta anúncios novidade"]
-news_us = ["marketing trends", "B2B sales", "SaaS growth"]
+# Tema-macro: o foco de toda a pesquisa. Perguntado no setup (./scripts/new_brand.sh).
+subject = "__TEMA__"
+short = "__TEMA__"                       # versão curta, usada nas mensagens do bot
+# Consultas de sinais (Hacker News e Google News). Vazias = usa o tema-macro.
+hn_queries = ["__TEMA_EN__"]         # em inglês (Hacker News é em inglês); vazio = tema-macro
+news_br = ["__TEMA__"]
+news_us = ["__TEMA_EN__"]
 
-# ----- Opcionais da pesquisa (sem eles, vale o padrão: últimos 7 dias, foco em potencial viral) -----
-# short: assunto curto usado nas mensagens do bot ("Pesquisando <short>"). Sem ele, usa subject.
-# short = "marketing e vendas"
-# scope: substitui a abertura do prompt de pesquisa. Use para uma pesquisa mais macro.
-# scope = """Pesquise na web as tendências e movimentos dos últimos 3 meses em marketing e vendas que
-# mudam a forma como empresas crescem, com dados e pesquisas recentes."""
-# mix: substitui a regra "pelo menos metade dos temas do tipo Novidade ou Aplicação prática".
+# ----- Opcionais da pesquisa (sem eles: últimos 7 dias, tudo dentro do tema-macro, pesos iguais) -----
+# priorities: o que priorizar dentro do tema (ex.: novidades, aplicações práticas, dados).
+# priorities = """PRIORIDADE: 1. ... 2. ... 3. ..."""
+# scope: substitui a abertura do prompt de pesquisa (ex.: janela maior, olhar mais macro).
+# scope = """Pesquise na web os movimentos dos últimos 3 meses em <tema>, com dados e pesquisas recentes."""
+# mix: regra de distribuição dos tipos de tema (Novidade, Aplicação prática, Tendência, Dados e pesquisa, Mercado).
 # mix = "Pelo menos metade dos temas do tipo Tendência ou Dados e pesquisa."
 # news_days: janela do Google News e do Hacker News, em dias (padrão 7).
 # news_days = 30
-# weights: pesos do ranking dos temas; só os informados mudam (padrão: momentum 0.40, novelty 0.25,
-# relevance 0.20, ownability 0.15). Para algo menos "hype" e mais macro, reduza momentum/novelty.
-# weights = { momentum = 0.25, novelty = 0.15, relevance = 0.35, ownability = 0.25 }
+# weights: pesos do ranking dos temas (padrão: 0.25 cada); só os informados mudam.
+# weights = { momentum = 0.40, novelty = 0.25, relevance = 0.20, ownability = 0.15 }
 
 [content]
-arcs = '''PENDENTE (ver o exemplo em brands/exemplo)'''
-illustration_hint = '''PENDENTE (ver o exemplo em brands/exemplo)'''
 # ----- Opcionais de texto (prevalecem sobre as regras genéricas e entram na revisão editorial) -----
+# arcs: roteiros narrativos do carrossel (sequência de slides por tipo de tema).
+# arcs = """- Arco para NOVIDADE: o que é (capa) → por que importa → como funciona (ilustração) → ... → CTA."""
+# illustration_hint: como descrever o estilo das ilustrações para quem escreve o post.
+# illustration_hint = """no padrão visual da marca: isométrica, blocos na cor de acento, rótulos numerados."""
 # copy: regras de copy dos slides da marca.
 # copy = """- Capa em forma de pergunta que o público faria.
 # - Nome da marca só no último slide."""
@@ -98,8 +100,10 @@ reference = "style/illustration-reference.png"   # opcional; se não existir, ge
 style = '''PENDENTE (ver o exemplo em brands/exemplo)'''
 
 [language]
-checks = ["travessao", "exclamacao"]
-banned = ["fórmula secreta", "hack", "guru", "gatilho mental", "explodir", "10x", "garantido"]
+# Checagens automáticas do texto (opcional): travessao | exclamacao | paralelismo | dicotomia
+checks = []
+# Palavras e expressões que a marca não usa (opcional)
+banned = []
 brand_regex = ''   # opcional: regex de grafia errada do nome
 brand_regex_msg = ""
 

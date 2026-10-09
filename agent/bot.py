@@ -47,7 +47,8 @@ HELP = (
     "/status  situação da semana e custo\n"
     "/pendentes  reenvia posts esperando aprovação\n"
     "/verificar  confere se o último post saiu em todas as redes\n\n"
-    "Também pode escrever livremente: \"faz um post sobre o lançamento X\"."
+    "Também pode escrever livremente (\"faz um post sobre X\") ou mandar um link, vídeo do YouTube ou texto "
+    "de referência: nesse caso eu uso só o que você mandou."
 )
 
 
@@ -193,17 +194,24 @@ async def run_research(ctx, chat_id: int, *, week_id: int | None, slots: int, di
                        request: str | None = None, label_prefix: str = "Tema"):
     """Pesquisa, guarda candidatos (os primeiros como propostos, o resto como reserva) e envia ao humano."""
     origin = "request" if request else "weekly"
-    await say(ctx, chat_id, f"Pesquisando {e(SUBJECT)}. Leva alguns minutos."
-              if not request else f"Apurando o assunto: <i>{e(request)}</i>.")
+    if not request:
+        await say(ctx, chat_id, f"Pesquisando {e(SUBJECT)}. Leva alguns minutos.")
+    elif research.is_reference(request):
+        await say(ctx, chat_id, "Lendo as referências enviadas. Vou usar só elas, sem buscar outras fontes.")
+    else:
+        await say(ctx, chat_id, f"Apurando o assunto: <i>{e(request[:300])}</i>.")
     meter = costs.Meter()
     costs.current.set(meter)  # vale só para esta tarefa
-    res = await research.research(n=research.candidates_for(slots), direction=direction, request=request)
+    res, refs = await research.research(n=research.candidates_for(slots), direction=direction, request=request)
     batch = f"{origin}-{uuid.uuid4().hex[:8]}"
     db.add_cost("research", batch, meter.as_dict())
     ids = []
     for i, cand in enumerate(res.candidates):
         status = "proposed" if i < slots else "backlog"
-        ids.append(db.add_topic(week_id, cand.model_dump(), status, origin, batch, request or direction))
+        payload = cand.model_dump()
+        if refs:  # referências enviadas: seguem com o tema até a escrita e a revisão (só elas valem)
+            payload["_refs"] = refs[:12000]
+        ids.append(db.add_topic(week_id, payload, status, origin, batch, request or direction))
     if week_id:
         db.update_week(week_id, status="proposing")
     await say(ctx, chat_id, f"<b>Leitura da semana</b>\n{e(res.landscape)}")
@@ -218,7 +226,7 @@ async def research_with_theme(ctx, chat_id: int, week_id: int, text: str):
     ("Seu tema"); se a semana tiver mais posts, os demais seguem a pesquisa normal."""
     w = db.row("SELECT * FROM weeks WHERE id = ?", week_id)
     n = max(w["n_posts"] or 1, 1)
-    if not research.URL_RX.search(text):
+    if not research.is_reference(text):
         db.update_week(week_id, direction=text)
         await run_research(ctx, chat_id, week_id=week_id, slots=n, direction=text)
         return
@@ -276,7 +284,29 @@ async def send_preview(ctx, chat_id: int, post_id: int):
     if rv and rv.get("scores"):
         status = "aprovado" if rv["approved"] else "com ressalvas"
         note += f"\nRevisão editorial: {status}, nota mínima {rv['min']}/10."
+    # As legendas não citam fontes: elas ficam aqui, para quem aprova conferir.
+    srcs = post_sources(t["payload"], c)
+    if srcs:
+        note += "\n\n<b>Fontes deste post</b>\n" + "\n".join(srcs)
     await say(ctx, chat_id, f"Aprova este post para Instagram e LinkedIn?{note}", post_kb(post_id))
+
+
+def post_sources(topic: dict, content: dict) -> list[str]:
+    """Fontes do tema (com link) e as citadas nos slides, sem repetição."""
+    out, seen = [], set()
+    for src in topic.get("sources", []):
+        url = src.get("url") or ""
+        key = url or src.get("name")
+        if key and key not in seen:
+            seen.add(key)
+            out.append(f"• <a href=\"{e(url)}\">{e(src.get('name') or url)}</a>" if url.startswith("http")
+                       else f"• {e(src.get('name') or url)}")
+    for sl in content.get("slides", []):
+        txt = (sl.get("source") or "").strip()
+        if txt and txt not in seen:
+            seen.add(txt)
+            out.append(f"• {e(txt)} (slide)")
+    return out[:10]
 
 
 async def ask_when(ctx, chat_id: int, post_id: int):
@@ -563,9 +593,11 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         week_id, choice = int(args[0]), args[1]
         if choice == "y":
             db.set_awaiting(chat_id, "theme", week_id)
-            await ask(ctx, chat_id, "Qual tema? Dois formatos:\n"
-                                    "• geral: \"tendências de marketing para 2027\"\n"
-                                    "• específico: \"Título do conteúdo · https://...\"", "Tema ou título + link")
+            await ask(ctx, chat_id, "Qual tema? Três formatos:\n"
+                                    "• geral: um assunto ou ângulo para a semana (vira o foco da pesquisa)\n"
+                                    "• específico: \"Título do conteúdo · https://...\" (página ou vídeo do YouTube)\n"
+                                    "• texto de referência colado aqui\n"
+                                    "Com link, vídeo ou texto, uso só essas referências.", "Tema, link ou texto")
         else:
             w = db.row("SELECT * FROM weeks WHERE id = ?", week_id)
             background(ctx, chat_id, run_research(ctx, chat_id, week_id=week_id, slots=max(w["n_posts"] or 1, 1),

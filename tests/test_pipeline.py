@@ -17,18 +17,18 @@ sample = json.loads((here / "sample_post.json").read_text())
 sample.pop("pillar")
 
 TOPIC = TopicProposal(
-    title="Agentes de IA em produção", headline="O piloto acabou", why_now="Teste.",
+    title="Tema de exemplo", headline="Título de exemplo", why_now="Teste.",
     angle="Novidade", practical_uses=["Resumir reuniões do comercial", "Triagem de chamados"],
-    narrative="Gancho direto no lançamento, formato prático.",
+    narrative="Gancho direto, formato prático.",
     data_points=[{"fact": "Dado de teste", "source_url": "https://example.com"}],
-    synopsis="Teste.", outline=["capa", "cta"], pillar="Integração de ambientes IA",
+    synopsis="Teste.", outline=["capa", "cta"], pillar="Pilar 2",
     scores={"momentum": 8, "novelty": 9, "relevance": 9, "ownability": 9},
     sources=[{"name": "Exemplo", "url": "https://example.com", "date": None}],
 ).model_dump()
 
 
 async def fake_image(prompt, out_path, **kw):
-    assert kw.get("model") == "gpt-image-2" and "ERP E CRM" in prompt, kw
+    assert kw.get("model") == "gpt-image-2" and "ENTRADA" in prompt, kw
     from agent.illustration import REFERENCE
     if REFERENCE.exists():  # marcas sem imagem de referência geram só pelo texto de estilo
         assert kw.get("reference") and Path(kw["reference"]).name == REFERENCE.name, "referência de estilo"
@@ -56,7 +56,7 @@ def test_language_guard():
     """Cada regra de linguagem configurada para a marca ativa precisa disparar."""
     bad = json.loads(json.dumps(sample))
     banned = content.BANNED[0] if content.BANNED else ""
-    bad["caption_instagram"] = f"Isso não é hype, é operação — e é {banned}! Mais do que tecnologia, resultado."
+    bad["caption_instagram"] = f"Isso não é X, é Y — e é {banned}! Mais do que A, B."
     v = content.language_violations(bad)
     labels = " ".join(v)
     for _, label in content.CHECKS:

@@ -16,11 +16,14 @@ brands/<slug>/
   reference_sources.json   criadores que a marca acompanha (YouTube, Instagram)
 ```
 
-Exemplo completo e funcionando: `brands/exemplo` (empresa fictícia Atlas).
+O kit não traz tema de conteúdo pré-definido: o setup pergunta o **tema-macro** da marca.
+`brands/exemplo` (empresa fictícia Atlas) serve só para testes e prévia visual.
 
 ## 1. O que pedir ao cliente
 
 **Marca**
+- **Tema-macro do conteúdo**: o assunto amplo que o agente vai pesquisar e sobre o qual vai postar
+  (ex.: "nutrição esportiva"), de preferência também em inglês para fontes internacionais.
 - Apresentação da empresa: quem é, o que oferece, para quem, como fala, o que nunca dizer.
 - 2 a 4 pilares ou serviços (aparecem no último slide de todo post).
 - Identidade visual: cores (fundo, texto, acento), arquivo da fonte, logo claro e escuro.
@@ -59,6 +62,11 @@ de marca dela, e o kit original continua disponível para atualizações (`git r
 ```bash
 ./scripts/new_brand.sh <slug> "<Nome da marca>"
 ```
+
+O script pergunta o **tema-macro** (e a versão em inglês, opcional) e já monta a pesquisa a partir
+dele: consultas do Google News e do Hacker News, termos do Google Trends e do X. O Reddit fica
+desligado até você listar as comunidades do tema em `apify_sources.json`. Sem perguntas:
+`./scripts/new_brand.sh <slug> "<Nome>" "<tema-macro>" "<tema em inglês>"`.
 
 1. Preencha `brands/<slug>/brand.toml` (tudo marcado PENDENTE) e `knowledge/marca.md`.
 2. Coloque fontes, logos, fotos e a referência de ilustração em `assets/`.
@@ -114,9 +122,11 @@ Sem as chaves, o serviço sobe e fica aguardando (não entra em loop de erro).
 ## 5. Primeiro ciclo
 
 No grupo: `/semana@<bot>`. Depois de escolher quantos posts, o bot pergunta se você quer indicar um
-tema: um direcionamento geral ("tendências de marketing para 2027") vira o foco da pesquisa; um
-conteúdo específico com título e link ("Título · https://...") vira a base do post. Ou toque em
-"Pode pesquisar" para seguir só com as tendências. Aprovar um tema, aprovar o post e escolher o **horário da grade**
+tema: um direcionamento geral vira o foco da pesquisa; um link (página ou vídeo do YouTube) ou um
+texto de referência vira a base do post, e o agente usa só esse material, sem buscar outras fontes.
+Ou toque em "Pode pesquisar" para seguir com as tendências do tema-macro.
+
+As legendas não citam fontes: as fontes de cada post aparecem na prévia de aprovação no Telegram. Aprovar um tema, aprovar o post e escolher o **horário da grade**
 (não "postar agora"), para conferir na fila do Buffer antes de publicar. Depois do horário, o bot
 confirma no grupo com os links ou avisa o que falhou.
 

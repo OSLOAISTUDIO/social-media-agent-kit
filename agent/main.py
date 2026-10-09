@@ -24,6 +24,9 @@ def main() -> None:
         logging.error("Configure as variáveis: %s. Aguardando.", ", ".join(missing))
         while True:
             time.sleep(3600)
+    if cfg.brand_slug == "exemplo":
+        sys.exit("BRAND=exemplo é só para testes e prévia visual (não tem tema de conteúdo). Crie a sua marca com "
+                 "./scripts/new_brand.sh <slug> \"<Nome>\" (ele pergunta o tema-macro) e defina BRAND=<slug>.")
     if not cfg.knowledge_root.exists():
         sys.exit(f"Base de conhecimento não encontrada: {cfg.knowledge_root}")
     db.init()

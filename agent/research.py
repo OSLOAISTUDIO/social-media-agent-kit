@@ -13,13 +13,15 @@ import feedparser
 import httpx
 
 from . import apify, db, llm, prompts, references
-from .config import brand
+from .config import brand, cfg
 from .models import ResearchResult, TopicProposal
 
 log = logging.getLogger(__name__)
 
 R = brand["research"]
-HN_QUERIES = R.get("hn_queries", [])
+# Consultas de sinais: as do brand.toml; sem elas, o próprio tema-macro da marca (definido no setup)
+THEME = R.get("short") or R["subject"]
+HN_QUERIES = R.get("hn_queries") or [THEME]
 # Janela dos sinais de notícia e Hacker News ([research] news_days; padrão 7 dias)
 NEWS_DAYS = int(R.get("news_days", 7))
 NEWS_FEEDS = {
@@ -27,7 +29,7 @@ NEWS_FEEDS = {
     "Google News US": "https://news.google.com/rss/search?q={q}+when:%dd&hl=en-US&gl=US&ceid=US:en" % NEWS_DAYS,
 }
 NEWS_QUERIES = {
-    "Google News BR": R.get("news_br", []),
+    "Google News BR": R.get("news_br") or [THEME],
     "Google News US": R.get("news_us", []),
 }
 
@@ -40,10 +42,8 @@ def candidates_for(slots: int) -> int:
     return max(MIN_CANDIDATES, min(MAX_CANDIDATES, slots + 3))
 
 
-# Peso de cada critério no ranking final. Potencial viral (momentum) pesa mais; novidade vem em
-# seguida: lançamentos e recursos novos com aplicação prática antes de dados sem novidade de produto.
-# [research] weights no brand.toml sobrescreve só os pesos informados.
-WEIGHTS = {"momentum": 0.40, "novelty": 0.25, "relevance": 0.20, "ownability": 0.15} | R.get("weights", {})
+# Pesos do ranking: neutros por padrão; [research] weights no brand.toml sobrescreve os informados.
+WEIGHTS = {"momentum": 0.25, "novelty": 0.25, "relevance": 0.25, "ownability": 0.25} | R.get("weights", {})
 
 
 async def _hacker_news(client: httpx.AsyncClient) -> list[str]:
@@ -99,6 +99,65 @@ def _urls(text: str) -> list[str]:
     return list(dict.fromkeys(u for u in urls if u))[:3]
 
 
+YT_RX = re.compile(r"(?:youtube\.com/(?:watch\?(?:[^#\s]*&)?v=|shorts/|live/|embed/)|youtu\.be/)([A-Za-z0-9_-]{11})")
+YT_LANGS = ["pt", "pt-BR", "en", "es"]
+
+
+def _yt_transcript(video_id: str) -> str | None:
+    """Transcrição direta (legendas do vídeo). O YouTube às vezes bloqueia servidores em nuvem."""
+    from youtube_transcript_api import YouTubeTranscriptApi
+
+    api = YouTubeTranscriptApi()
+    try:
+        t = api.fetch(video_id, languages=YT_LANGS)
+    except Exception:
+        try:  # qualquer idioma disponível
+            t = next(iter(api.list(video_id))).fetch()
+        except Exception:
+            return None
+    text = " ".join(s.text for s in t.snippets if s.text.strip())
+    return text or None
+
+
+async def _yt_transcript_apify(url: str) -> str | None:
+    """Alternativa pelo Apify quando a leitura direta é bloqueada (precisa de APIFY_TOKEN)."""
+    if not cfg.apify_token:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=120, headers={"Authorization": f"Bearer {cfg.apify_token}"}) as ap:
+            items = await apify.run_actor(ap, "pintostudio/youtube-transcript-scraper",
+                                          {"videoUrl": url, "targetLanguage": "pt"}, max_wait=180)
+    except Exception as e:
+        log.warning("transcrição pelo Apify falhou: %s", e)
+        return None
+    for it in items:
+        if isinstance(it.get("data"), list):
+            text = " ".join(str(seg.get("text", "")) for seg in it["data"]).strip()
+        else:
+            text = str(it.get("transcript") or it.get("output") or "").strip()
+        if text:
+            return text
+    return None
+
+
+async def _youtube(client: httpx.AsyncClient, url: str, video_id: str, limit: int) -> tuple[str, bool]:
+    """Título, canal e transcrição de um vídeo do YouTube. Devolve (texto, conseguiu_ler)."""
+    title, author = "", ""
+    try:
+        o = await client.get("https://www.youtube.com/oembed",
+                             params={"url": f"https://www.youtube.com/watch?v={video_id}", "format": "json"})
+        if o.status_code == 200:
+            title, author = o.json().get("title", ""), o.json().get("author_name", "")
+    except Exception:
+        pass
+    head = f"[{url}] Vídeo do YouTube: {title or video_id}" + (f" · canal {author}" if author else "")
+    text = await asyncio.to_thread(_yt_transcript, video_id) or await _yt_transcript_apify(url)
+    if not text:
+        return (f"{head}. A transcrição não está acessível: abra este vídeo pela busca na web "
+                "(título, descrição, matérias sobre ele) e não invente o conteúdo."), False
+    return f"{head}\nTranscrição:\n{text[:limit]}", True
+
+
 def _html_to_text(raw: str) -> str:
     t = re.sub(r"(?is)<(script|style|noscript|svg)\b.*?</\1>", " ", raw)
     t = re.sub(r"(?s)<!--.*?-->", " ", t)
@@ -106,28 +165,35 @@ def _html_to_text(raw: str) -> str:
     return " ".join(unescape(t).split())
 
 
-async def read_links(text: str, max_chars: int = 12000) -> str:
-    """Lê até 3 links do texto e devolve o conteúdo em texto, para o modelo trabalhar em cima.
+async def read_links(text: str, max_chars: int = 12000) -> tuple[str, int]:
+    """Lê até 3 links do texto (páginas e vídeos do YouTube) e devolve (conteúdo, links não lidos).
 
-    Página bloqueada (status >= 400, tela anti-robô ou texto curto demais) não entra como
-    conteúdo: vira uma nota pedindo para o modelo abrir o link pela busca na web."""
+    Página bloqueada (status >= 400, tela anti-robô ou texto curto demais) ou vídeo sem transcrição
+    não entra como conteúdo: vira uma nota pedindo para o modelo abrir o link pela busca na web."""
     urls = _urls(text)
     if not urls:
-        return ""
+        return "", 0
     per = max_chars // len(urls)
     fallback = "abra este link pela busca na web e use o conteúdo real da página (não use telas de bloqueio)."
-    parts = []
+    parts, unread = [], 0
     async with httpx.AsyncClient(timeout=25, follow_redirects=True,
                                  headers={"User-Agent": BROWSER_UA, "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"}) as c:
         for url in urls:
+            if m := YT_RX.search(url):
+                part, ok = await _youtube(c, url, m.group(1), per)
+                parts.append(part)
+                unread += not ok
+                continue
             try:
                 r = await c.get(url)
             except Exception as e:
                 parts.append(f"[{url}] não foi possível abrir ({e.__class__.__name__}): {fallback}")
+                unread += 1
                 continue
             ctype = r.headers.get("content-type", "").lower()
             if r.status_code >= 400:
                 parts.append(f"[{url}] a página respondeu HTTP {r.status_code}: {fallback}")
+                unread += 1
                 continue
             if "html" in ctype:
                 body = _html_to_text(r.text)
@@ -135,13 +201,15 @@ async def read_links(text: str, max_chars: int = 12000) -> str:
                 body = " ".join(r.text.split())
             else:
                 parts.append(f"[{url}] conteúdo do tipo {ctype or 'desconhecido'}: {fallback}")
+                unread += 1
                 continue
             blocked = len(body) < 400 or (len(body) < 2000 and any(h in body.lower() for h in BLOCK_HINTS))
             if blocked:
                 parts.append(f"[{url}] a página não pôde ser lida (provável bloqueio anti-robô): {fallback}")
+                unread += 1
                 continue
             parts.append(f"[{url}]\n{body[:per]}")
-    return "\n\n".join(parts)
+    return "\n\n".join(parts), unread
 
 
 PILLARS = [p["name"] for p in brand.get("pillars", [])]
@@ -161,19 +229,39 @@ def score(t: TopicProposal) -> float:
     return round(sum(getattr(s, k) * w for k, w in WEIGHTS.items()), 2)
 
 
-async def research(n: int = MIN_CANDIDATES, direction: str | None = None, request: str | None = None) -> ResearchResult:
-    """Devolve candidatos ordenados pelo score composto.
+REF_TEXT_MIN = 280  # pedido com link, vídeo ou texto longo colado = referência enviada pelo humano
+
+
+def is_reference(request: str | None) -> bool:
+    return bool(request) and (bool(_urls(request)) or len(request) >= REF_TEXT_MIN)
+
+
+async def research(n: int = MIN_CANDIDATES, direction: str | None = None,
+                   request: str | None = None) -> tuple[ResearchResult, str | None]:
+    """Devolve (candidatos, referências). Candidatos ordenados pelo score composto.
 
     direction: orientação do humano para a semana (refaz a busca com esse foco)
-    request:   pedido avulso de post (o tema já vem dado; o agente só apura e estrutura)
+    request:   pedido avulso de post. Se trouxer link, vídeo ou texto de referência, o agente usa
+               SOMENTE essas referências: não coleta sinais nem busca outras fontes (a busca na web
+               só é liberada para abrir links que não puderam ser lidos direto).
     """
-    signals, links = await asyncio.gather(collect_signals(), read_links(request) if request else asyncio.sleep(0, ""))
+    if is_reference(request):
+        links, unread = await read_links(request)
+        references = links + ("\n\nTEXTO ENVIADO PELO HUMANO:\n" + request if len(request) >= REF_TEXT_MIN else "")
+        web_note = ("Alguns links não puderam ser lidos direto: use a busca na web SOMENTE para abrir esses "
+                    "links, nunca para buscar outras fontes." if unread else "Não use busca na web.")
+        prompt = prompts.RESEARCH_REFS.format(web_note=web_note, request=request,
+                                              references=references.strip() or "(apenas o pedido acima)", n=n)
+        res = await llm.structured(prompts.base_instructions(), prompt, ResearchResult, web=bool(unread))
+        res.candidates = res.candidates[:n]
+        for cand in res.candidates:
+            cand.pillar = normalize_pillar(cand.pillar)
+        return res, references.strip() or request
+
+    signals = await collect_signals()
     if request:
         dir_text = (f"PEDIDO DO HUMANO: o post deve ser sobre: {request}. Gere {n} ângulos diferentes "
                     "para esse mesmo assunto, todos apurados com fontes.")
-        if links:
-            dir_text += ("\n\nCONTEÚDO DOS LINKS ENVIADOS PELO HUMANO (base principal do post: trabalhe em cima "
-                         "dele, cite-o como fonte e complemente com outras fontes):\n" + links)
     elif direction:
         dir_text = f"DIRECIONAMENTO DO HUMANO PARA ESTA SEMANA (prioridade máxima): {direction}"
     else:
@@ -187,4 +275,4 @@ async def research(n: int = MIN_CANDIDATES, direction: str | None = None, reques
         cand.pillar = normalize_pillar(cand.pillar)
     if not request:
         res.candidates.sort(key=score, reverse=True)
-    return res
+    return res, None

@@ -5,6 +5,9 @@ tema da marca, propõe temas no Telegram, cria carrossel e stories no padrão vi
 escreve as legendas no tom dela e publica no Instagram e no LinkedIn via Buffer, sempre com
 aprovação humana em dois pontos: o tema e o post pronto.
 
+O kit **não traz nenhum tema de conteúdo pré-definido**: na instalação, o setup pergunta o
+**tema-macro** da marca, e toda a pesquisa parte dele.
+
 O código é um **motor** único (`agent/`). Tudo o que é de uma empresa (identidade, tom, pilares,
 temas de pesquisa, cores, fontes, logos, fotos, documentos) fica num **pacote de marca** em
 `brands/<slug>/`, escolhido pela variável `BRAND`. Cada empresa roda como uma instância separada,
@@ -18,13 +21,13 @@ nas próprias contas.
 Segunda 09:00  "Quantos posts esta semana?"  [1] [2] [Nenhum]
       │
 Tema?          "Quer indicar algum tema?"  [Indicar um tema] [Pode pesquisar]
-               · geral ("tendências de marketing para 2027") → vira o direcionamento da pesquisa
-               · específico ("Título · https://...") → o agente lê a página e monta o post em cima
-                 dela ("Seu tema"); link bloqueado é aberto pela busca na web
+               · geral (um assunto ou ângulo para a semana) → vira o direcionamento da pesquisa
+               · específico ("Título · https://...", página ou vídeo do YouTube) ou texto colado →
+                 o post usa SOMENTE essas referências ("Seu tema"), sem buscar outras fontes
       │
 Pesquisa       Google Trends, Reddit e X (Apify) + Hacker News + Google News + criadores de
                referência (YouTube/Instagram) + busca na web do modelo → 4 a 5 temas com nota
-               (potencial viral, novidade, relevância, autoridade da marca)
+               (tração, novidade, relevância, autoridade da marca; pesos iguais por padrão)
       │
 Telegram       Tema com: por que agora, dados com fonte, aplicações práticas, pegada narrativa,
                sinopse, roteiro e pilar. [Aprovar] [Outra ideia] [Direcionar]
@@ -33,7 +36,8 @@ Criação        7 a 9 slides (capa, conteúdo, 1 ilustração isométrica com g
                legendas Instagram e LinkedIn → revisão editorial automática (7 critérios, nota 8+)
                → checagem de linguagem → render em 2× (feed 4:5 e stories 9:16) + PDF vetorial
       │
-Telegram       Prévia com custo OpenAI e nota da revisão. [Aprovar post] [Pedir ajustes]
+Telegram       Prévia com custo OpenAI, nota da revisão e as FONTES do post (as legendas não
+               citam fontes). [Aprovar post] [Pedir ajustes]
       │
 Quando?        [Postar agora] [Próximo horário da grade] [Escolher dia e horário (texto livre)]
       │
@@ -42,8 +46,16 @@ Buffer         Carrossel no Instagram (JPEG), stories com os mesmos slides, Link
                o erro com [Tentar de novo] [Esquecer].
 ```
 
-Pedidos avulsos: `/novopost <assunto>` ou responder a uma mensagem do bot. Links no pedido também
-são lidos e viram a base do post.
+Pedidos avulsos: `/novopost <assunto>` ou responder a uma mensagem do bot.
+
+**Referências enviadas.** Quando o pedido traz um link, um vídeo do YouTube ou um texto de
+referência colado (a partir de ~280 caracteres), o agente usa **somente** esse material: não coleta
+tendências nem pesquisa outras fontes, e a revisão editorial reprova qualquer fato de fora dele. A
+busca na web só é usada para abrir um link que não pôde ser lido direto.
+
+**YouTube.** Links de vídeo (youtube.com/watch, youtu.be, shorts, live) são lidos pela transcrição,
+com título e canal. Se o YouTube bloquear a leitura direta (comum em servidores na nuvem) e houver
+`APIFY_TOKEN`, a transcrição vem pelo Apify (`pintostudio/youtube-transcript-scraper`).
 
 ## Comandos no Telegram
 
@@ -73,19 +85,22 @@ brands/<slug>/
   reference_sources.json   criadores de conteúdo que a marca acompanha (opcional)
 ```
 
-- `brands/exemplo/`: empresa fictícia **Atlas**, completa e funcionando (padrão de `BRAND`).
-- `brands/_template/`: modelo usado por `./scripts/new_brand.sh <slug> "<Nome>"`.
+- `brands/exemplo/`: empresa fictícia **Atlas**, sem tema de conteúdo; serve só para os testes e a
+  prévia visual (o bot não sobe com `BRAND=exemplo`).
+- `brands/_template/`: modelo usado por `./scripts/new_brand.sh <slug> "<Nome>"`, que **pergunta o
+  tema-macro** e monta a pesquisa (Google News, Hacker News, Google Trends, X) a partir dele.
 - `python -m scripts.check_brand <slug>` lista o que falta no pacote.
 
 ## Pesquisa: do curto prazo ao macro
 
-O padrão é curto prazo: últimos 7 dias, com peso maior para potencial viral e novidade. Para uma
-marca que prefere temas mais estruturais, ajuste no `brand.toml` (todos opcionais):
+O padrão é neutro: últimos 7 dias, sempre dentro do tema-macro, com os quatro critérios do ranking
+com o mesmo peso. Para ajustar, use no `brand.toml` (todos opcionais):
 
 | Campo `[research]` | O que faz |
 |---|---|
 | `scope` | substitui a abertura do prompt de pesquisa (ex.: "tendências dos últimos 3 meses...") |
-| `mix` | substitui a regra de metade dos temas serem novidade/aplicação prática |
+| `priorities` | o que priorizar dentro do tema (novidades, aplicações práticas, dados...) |
+| `mix` | regra de distribuição dos tipos de tema (Novidade, Tendência, Dados e pesquisa...) |
 | `weights` | pesos do ranking (`momentum`, `novelty`, `relevance`, `ownability`); só os informados mudam |
 | `news_days` | janela do Google News e do Hacker News em dias (padrão 7) |
 | `short` | assunto curto usado nas mensagens do bot |
@@ -104,7 +119,8 @@ genéricas e entram na revisão editorial) e, em `[visual]`, `font_display`/`fon
 ./run.sh setup            # cria o ambiente e instala dependências
 ./run.sh test             # testes sem chamar nenhuma API
 BRAND=exemplo ~/.venvs/social-media-agent/bin/python -m tests.render_sample   # gera peças de amostra
-./run.sh                  # sobe o bot (precisa do .env preenchido)
+./scripts/new_brand.sh minhamarca "Minha Marca"                               # pergunta o tema-macro
+BRAND=minhamarca ./run.sh   # sobe o bot (precisa do .env preenchido)
 ```
 
 ## Estrutura

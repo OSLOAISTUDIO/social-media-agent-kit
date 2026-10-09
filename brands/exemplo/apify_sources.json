@@ -1,16 +1,14 @@
 {
-  "_comment": "Fontes de tendência rodadas via Apify a cada pesquisa. 'actor' usa o formato usuario/actor. 'format' define como o resultado vira sinal para o modelo: google_trends | reddit | x | generic. Para desligar uma fonte, use enabled: false.",
+  "_comment": "Marca de exemplo: fontes do Apify desligadas (sem tema de conteúdo).",
   "sources": [
     {
-      "name": "Google Trends BR",
-      "enabled": true,
+      "name": "Google Trends",
+      "enabled": false,
       "actor": "apify/google-trends-scraper",
       "format": "google_trends",
       "input": {
         "searchTerms": [
-          "marketing digital",
-          "tráfego pago",
-          "CRM"
+          "tema de exemplo"
         ],
         "timeRange": "now 7-d",
         "geo": "BR",
@@ -18,28 +16,12 @@
       }
     },
     {
-      "name": "Reddit (comunidades de marketing e vendas)",
-      "enabled": true,
+      "name": "Reddit",
+      "enabled": false,
       "actor": "trudax/reddit-scraper-lite",
       "format": "reddit",
       "input": {
-        "startUrls": [
-          {
-            "url": "https://www.reddit.com/r/marketing/top/?t=week"
-          },
-          {
-            "url": "https://www.reddit.com/r/sales/top/?t=week"
-          },
-          {
-            "url": "https://www.reddit.com/r/SaaS/top/?t=week"
-          },
-          {
-            "url": "https://www.reddit.com/r/digital_marketing/top/?t=week"
-          },
-          {
-            "url": "https://www.reddit.com/r/startups/top/?t=week"
-          }
-        ],
+        "startUrls": [],
         "sort": "top",
         "time": "week",
         "maxItems": 40,
@@ -51,13 +33,12 @@
     },
     {
       "name": "X (Twitter)",
-      "enabled": true,
+      "enabled": false,
       "actor": "apidojo/tweet-scraper",
       "format": "x",
       "input": {
         "searchTerms": [
-          "(marketing OR \"B2B sales\" OR \"SaaS growth\") min_faves:500 -filter:replies",
-          "(marketing OR vendas OR \"tráfego pago\") min_faves:200 lang:pt -filter:replies"
+          "\"tema de exemplo\" min_faves:100 -filter:replies"
         ],
         "sort": "Top",
         "maxItems": 60

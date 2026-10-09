@@ -13,7 +13,7 @@ HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 REQUIRED = {
     "identity": ["name", "category", "city", "site", "instagram", "kicker", "footer_tagline", "cta_button", "editorial_standard"],
     "voice": ["language_label", "audience", "tone", "cover_example"],
-    "research": ["subject", "priorities"],
+    "research": ["subject"],
     "visual": ["paper", "ink", "accent", "surface", "font_family", "logo_light", "logo_dark"],
     "illustration": ["style"],
     "knowledge": ["core"],
@@ -75,6 +75,10 @@ def check(slug: str) -> tuple[list[str], list[str]]:
                 warnings.append("nenhuma referência editorial cadastrada (reference_sources.json)")
 
     text = (d / "brand.toml").read_text(encoding="utf-8")
+    ap_file = d / "apify_sources.json"
+    ap_text = ap_file.read_text(encoding="utf-8") if ap_file.exists() else ""
+    if "__TEMA" in text or "__TEMA" in ap_text:
+        errors.append("tema-macro não definido: crie a marca com ./scripts/new_brand.sh (ele pergunta o tema)")
     pend = [l.strip() for l in text.splitlines() if "PENDENTE" in l and not l.strip().startswith("#")]
     warnings += [f"pendente no brand.toml: {l}" for l in pend]
     return errors, warnings
