@@ -13,7 +13,10 @@ async def main():
     sample = here / f"sample_post_{BRAND_SLUG}.json"
     content = json.loads((sample if sample.exists() else here / "sample_post.json").read_text())
     # Diagrama de exemplo no lugar do que o gpt-image-2 geraria.
-    fixture = here / "fixtures" / "diagram.png"
+    # Ilustração da marca (tests/fixtures/diagram_<slug>.png), se houver; senão, a genérica
+    fixture = here / "fixtures" / f"diagram_{BRAND_SLUG}.png"
+    if not fixture.exists():
+        fixture = here / "fixtures" / "diagram.png"
     content["_images"] = {str(i): str(fixture)
                           for i, s in enumerate(content["slides"]) if s["layout"] == "illustration"}
     out = cfg.runs_dir / "_sample"

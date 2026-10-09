@@ -63,6 +63,8 @@ de marca dela, e o kit original continua disponível para atualizações (`git r
 1. Preencha `brands/<slug>/brand.toml` (tudo marcado PENDENTE) e `knowledge/marca.md`.
 2. Coloque fontes, logos, fotos e a referência de ilustração em `assets/`.
 3. Ajuste `apify_sources.json` (termos e comunidades do setor) e `reference_sources.json`.
+   Para uma pesquisa mais macro, veja "Pesquisa: do curto prazo ao macro" no README (`scope`,
+   `weights`, `news_days` e janelas maiores no Apify).
 4. Confira o que falta:
 
 ```bash
@@ -99,6 +101,9 @@ Sem as chaves, o serviço sobe e fica aguardando (não entra em loop de erro).
    ```bash
    ./scripts/set_secrets.sh agent
    ```
+   Erros comuns, que o `check_setup` mostra como HTTP 401: colar a mesma chave duas vezes (fica
+   com o dobro do tamanho; o script avisa) e colar a chave de um serviço no campo de outro. Setas
+   e marcadores de colagem que o terminal mande junto são limpos automaticamente.
 3. No grupo, mandar `/start@<bot>`: o bot responde o ID do grupo. Rodar o script de novo só com
    `TELEGRAM_ALLOWED_CHAT_IDS` (grupo primeiro, IDs pessoais depois, separados por vírgula).
 4. Conferir todas as conexões e criar o bucket público do Supabase:
@@ -108,7 +113,10 @@ Sem as chaves, o serviço sobe e fica aguardando (não entra em loop de erro).
 
 ## 5. Primeiro ciclo
 
-No grupo: `/semana@<bot>`. Aprovar um tema, aprovar o post e escolher o **horário da grade**
+No grupo: `/semana@<bot>`. Depois de escolher quantos posts, o bot pergunta se você quer indicar um
+tema: um direcionamento geral ("tendências de marketing para 2027") vira o foco da pesquisa; um
+conteúdo específico com título e link ("Título · https://...") vira a base do post. Ou toque em
+"Pode pesquisar" para seguir só com as tendências. Aprovar um tema, aprovar o post e escolher o **horário da grade**
 (não "postar agora"), para conferir na fila do Buffer antes de publicar. Depois do horário, o bot
 confirma no grupo com os links ou avisa o que falhou.
 

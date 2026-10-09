@@ -68,6 +68,8 @@ def build_html(content: dict, pillar: str, photos: tuple[Path, Path], story: boo
         ink_rgb=_rgb(VISUAL["ink"]),
         paper_rgb=_rgb(VISUAL["paper"]),
         cta_button=IDENTITY["cta_button"],
+        cover_photo=VISUAL.get("cover_photo", True),      # false: capa só com texto, no fundo da marca
+        slide_counter=VISUAL.get("slide_counter", True),  # false: sem "01 / 09" e sem barra de progresso
         footer_tagline=IDENTITY.get("footer_tagline", ""),
         site_url=cfg.site_url,
         handle=cfg.instagram_handle,

@@ -29,11 +29,12 @@ class Scores(BaseModel):
 class TopicProposal(BaseModel):
     title: str = Field(description="Nome curto do tema")
     headline: str = Field(description="Título provisório da capa, no tom da marca")
-    angle: Literal["Novidade", "Aplicação prática", "Dados e pesquisa", "Mercado"] = Field(
-        description="Tipo de post: novidade (lançamento/recurso novo), aplicação prática (como usar no dia a dia), dados e pesquisa, ou mercado")
+    angle: Literal["Novidade", "Aplicação prática", "Tendência", "Dados e pesquisa", "Mercado"] = Field(
+        description="Tipo de post: novidade (lançamento/recurso novo), aplicação prática (como usar no dia a dia), "
+                    "tendência (movimento de médio prazo no setor), dados e pesquisa, ou mercado")
     practical_uses: list[str] = Field(description="2 a 4 aplicações práticas concretas no dia a dia de trabalho (o que alguém faz com isso amanhã)")
     narrative: str = Field(description="Pegada narrativa: gancho, formato e tom do post, inspirados nas referências editoriais, na voz da marca")
-    why_now: str = Field(description="Justificativa: por que este tema está em alta nesta semana")
+    why_now: str = Field(description="Por que o tema importa agora (datas, pesquisas, volume, repercussão)")
     data_points: list[DataPoint] = Field(description="2 a 4 dados que sustentam o post")
     synopsis: str = Field(description="Sinopse do que o post vai trabalhar, 3 a 5 frases")
     outline: list[str] = Field(description="Roteiro slide a slide, 5 a 8 linhas")
@@ -43,7 +44,7 @@ class TopicProposal(BaseModel):
 
 
 class ResearchResult(BaseModel):
-    landscape: str = Field(description="Leitura geral da semana em IA e tecnologia, 2 a 3 frases")
+    landscape: str = Field(description="Leitura geral do momento no tema da marca, 2 a 3 frases")
     candidates: list[TopicProposal]
 
 

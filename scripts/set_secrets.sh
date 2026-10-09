@@ -20,10 +20,28 @@ KEYS=(
 
 echo "Railway: $(railway whoami --json | python3 -c 'import sys,json; print(json.load(sys.stdin)["email"])')"
 echo "Cole cada valor e tecle Enter (nada aparece enquanto digita). Enter vazio pula.\n"
+# Limpa o que o terminal pode colar junto com a chave: sequências de escape (setas como ESC[A,
+# marcadores de colagem ESC[200~ / ESC[201~), caracteres de controle e espaços nas pontas.
+# Já aconteceu de entrar "ESC[A ESC[A" antes de um token do Telegram, quebrando a URL da API.
+clean() {
+  print -rn -- "$1" | python3 -c '
+import re, sys
+v = sys.stdin.read()
+v = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", v)   # CSI: setas, colagem com colchetes
+v = re.sub(r"\x1b[@-Z\\-_]", "", v)               # outros ESC de 2 bytes
+v = re.sub(r"[\x00-\x1f\x7f]", "", v)             # controles restantes
+sys.stdout.write(v.strip())'
+}
+
 changed=0
 for key in $KEYS; do
   read -rs "value?$key: "
   echo
+  value="$(clean "$value")"
+  half=$(( ${#value} / 2 ))
+  if (( ${#value} > 20 && ${#value} % 2 == 0 )) && [[ "${value:0:$half}" == "${value:$half}" ]]; then
+    echo "  ! $key parece ter sido colada duas vezes (a mesma chave repetida). Confira antes de seguir."
+  fi
   if [[ -n "$value" ]]; then
     print -rn -- "$value" | railway variable set "$key" --stdin --skip-deploys --service "$SERVICE" >/dev/null
     echo "  ✓ $key salva"

@@ -17,6 +17,11 @@ nas próprias contas.
 ```
 Segunda 09:00  "Quantos posts esta semana?"  [1] [2] [Nenhum]
       │
+Tema?          "Quer indicar algum tema?"  [Indicar um tema] [Pode pesquisar]
+               · geral ("tendências de marketing para 2027") → vira o direcionamento da pesquisa
+               · específico ("Título · https://...") → o agente lê a página e monta o post em cima
+                 dela ("Seu tema"); link bloqueado é aberto pela busca na web
+      │
 Pesquisa       Google Trends, Reddit e X (Apify) + Hacker News + Google News + criadores de
                referência (YouTube/Instagram) + busca na web do modelo → 4 a 5 temas com nota
                (potencial viral, novidade, relevância, autoridade da marca)
@@ -37,7 +42,8 @@ Buffer         Carrossel no Instagram (JPEG), stories com os mesmos slides, Link
                o erro com [Tentar de novo] [Esquecer].
 ```
 
-Pedidos avulsos: `/novopost <assunto>` ou responder a uma mensagem do bot.
+Pedidos avulsos: `/novopost <assunto>` ou responder a uma mensagem do bot. Links no pedido também
+são lidos e viram a base do post.
 
 ## Comandos no Telegram
 
@@ -70,6 +76,27 @@ brands/<slug>/
 - `brands/exemplo/`: empresa fictícia **Atlas**, completa e funcionando (padrão de `BRAND`).
 - `brands/_template/`: modelo usado por `./scripts/new_brand.sh <slug> "<Nome>"`.
 - `python -m scripts.check_brand <slug>` lista o que falta no pacote.
+
+## Pesquisa: do curto prazo ao macro
+
+O padrão é curto prazo: últimos 7 dias, com peso maior para potencial viral e novidade. Para uma
+marca que prefere temas mais estruturais, ajuste no `brand.toml` (todos opcionais):
+
+| Campo `[research]` | O que faz |
+|---|---|
+| `scope` | substitui a abertura do prompt de pesquisa (ex.: "tendências dos últimos 3 meses...") |
+| `mix` | substitui a regra de metade dos temas serem novidade/aplicação prática |
+| `weights` | pesos do ranking (`momentum`, `novelty`, `relevance`, `ownability`); só os informados mudam |
+| `news_days` | janela do Google News e do Hacker News em dias (padrão 7) |
+| `short` | assunto curto usado nas mensagens do bot |
+
+No `apify_sources.json`, aumente as janelas: Google Trends `"timeRange": "today 3-m"` e Reddit com
+`/top/?t=month` e `"time": "month"`.
+
+Também opcionais: `[content] copy` e `captions` (regras de texto da marca, que prevalecem sobre as
+genéricas e entram na revisão editorial) e, em `[visual]`, `font_display`/`font_display_file`
+(fonte de títulos e números), `cover_photo = false` (capa só com texto) e `slide_counter = false`
+(sem contador de slides). Exemplos comentados em `brands/_template/brand.toml`.
 
 ## Rodar local
 

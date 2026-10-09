@@ -1,7 +1,8 @@
 """Bot do Telegram: conversa com o humano e orquestra pesquisa → aprovação → criação → aprovação → publicação.
 
 Callbacks (botões):
-  n:<qtd>              quantos posts na semana
+  n:<qtd>              quantos posts na semana (em seguida pergunta se há tema indicado)
+  tm:<week>:y|n        indicar um tema (texto livre: geral ou título + link) / pode pesquisar
   ap:<topic>           aprovar tema          rj:<topic>   outra ideia        dr:<topic>  direcionar
   ok:<post>            aprovar post          adj:<post>   pedir ajustes
   pub:<post>:now|slot  publicar agora / no próximo horário sugerido
@@ -24,17 +25,21 @@ from telegram.error import NetworkError, RetryAfter, TimedOut
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
 from . import content, costs, db, llm, prompts, publisher, research
-from .config import BRAND_NAME, cfg
+from .config import BRAND_NAME, brand, cfg
 from .models import Intent, ScheduleParse
 
 log = logging.getLogger(__name__)
 TZ = ZoneInfo(cfg.timezone)
 e = html.escape
 
+# Assunto da marca nas mensagens do bot ([research] short; sem ele, o subject)
+SUBJECT = brand["research"].get("short") or brand["research"]["subject"]
+
 HELP = (
     f"<b>Agent de social media · {e(BRAND_NAME)}</b>\n\n"
-    "Toda segunda eu pergunto quantos posts fazer, pesquiso o que está em alta em IA e tecnologia "
-    "e trago os temas para sua aprovação. Depois do OK, crio carrossel, stories e legendas, "
+    f"Toda segunda eu pergunto quantos posts fazer e se você quer indicar um tema (geral ou um conteúdo "
+    f"específico, com título e link). Sem tema, pesquiso o que está em alta em {e(SUBJECT)} "
+    "e trago as opções para sua aprovação. Depois do OK, crio carrossel, stories e legendas, "
     "mando para aprovação e publico via Buffer.\n\n"
     "/semana  começa (ou recomeça) o ciclo da semana\n"
     "/novopost &lt;assunto&gt;  pede um post avulso\n"
@@ -188,7 +193,7 @@ async def run_research(ctx, chat_id: int, *, week_id: int | None, slots: int, di
                        request: str | None = None, label_prefix: str = "Tema"):
     """Pesquisa, guarda candidatos (os primeiros como propostos, o resto como reserva) e envia ao humano."""
     origin = "request" if request else "weekly"
-    await say(ctx, chat_id, "Pesquisando tendências em IA e tecnologia. Leva alguns minutos."
+    await say(ctx, chat_id, f"Pesquisando {e(SUBJECT)}. Leva alguns minutos."
               if not request else f"Apurando o assunto: <i>{e(request)}</i>.")
     meter = costs.Meter()
     costs.current.set(meter)  # vale só para esta tarefa
@@ -205,6 +210,21 @@ async def run_research(ctx, chat_id: int, *, week_id: int | None, slots: int, di
     for i, tid in enumerate(ids[:slots], 1):
         label = f"{label_prefix} {i} de {slots}" if slots > 1 else label_prefix
         await say(ctx, chat_id, topic_text(db.topic(tid), label), topic_kb(tid))
+
+
+async def research_with_theme(ctx, chat_id: int, week_id: int, text: str):
+    """Tema indicado na pergunta da semana.
+    Sem link: vira o direcionamento da semana. Com link: o primeiro post sai em cima do conteúdo
+    ("Seu tema"); se a semana tiver mais posts, os demais seguem a pesquisa normal."""
+    w = db.row("SELECT * FROM weeks WHERE id = ?", week_id)
+    n = max(w["n_posts"] or 1, 1)
+    if not research.URL_RX.search(text):
+        db.update_week(week_id, direction=text)
+        await run_research(ctx, chat_id, week_id=week_id, slots=n, direction=text)
+        return
+    await run_research(ctx, chat_id, week_id=week_id, slots=1, request=text, label_prefix="Seu tema")
+    if n > 1:
+        await run_research(ctx, chat_id, week_id=week_id, slots=n - 1, direction=w["direction"])
 
 
 async def propose_replacement(ctx, chat_id: int, old: dict):
@@ -534,8 +554,22 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if n == 0:
             await say(ctx, chat_id, "Combinado, sem posts esta semana. Pedidos avulsos continuam valendo: /novopost.")
             return
-        background(ctx, chat_id, run_research(ctx, chat_id, week_id=w["id"], slots=n, direction=w["direction"]),
-                   "pesquisar temas")
+        await say(ctx, chat_id, f"Combinado, {n} post{'s' if n > 1 else ''}. Quer indicar algum tema? Pode ser um "
+                                "direcionamento geral ou um conteúdo específico, com título e link.",
+                  Kb([[Btn("🧭 Indicar um tema", callback_data=f"tm:{w['id']}:y"),
+                       Btn("🔎 Pode pesquisar", callback_data=f"tm:{w['id']}:n")]]))
+
+    elif kind == "tm":
+        week_id, choice = int(args[0]), args[1]
+        if choice == "y":
+            db.set_awaiting(chat_id, "theme", week_id)
+            await ask(ctx, chat_id, "Qual tema? Dois formatos:\n"
+                                    "• geral: \"tendências de marketing para 2027\"\n"
+                                    "• específico: \"Título do conteúdo · https://...\"", "Tema ou título + link")
+        else:
+            w = db.row("SELECT * FROM weeks WHERE id = ?", week_id)
+            background(ctx, chat_id, run_research(ctx, chat_id, week_id=week_id, slots=max(w["n_posts"] or 1, 1),
+                                                  direction=w["direction"]), "pesquisar temas")
 
     elif kind == "ap":
         tid = int(args[0])
@@ -621,6 +655,9 @@ async def on_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if awaiting == "request":
         background(ctx, chat_id, run_research(ctx, chat_id, week_id=None, slots=1, request=text,
                                               label_prefix="Proposta"), "apurar o pedido")
+        return
+    if awaiting == "theme":
+        background(ctx, chat_id, research_with_theme(ctx, chat_id, ref, text), "pesquisar o tema indicado")
         return
 
     intent = await llm.structured(prompts.ROLE, prompts.INTENT.format(text=text), Intent, fast=True)

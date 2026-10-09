@@ -45,9 +45,30 @@ hn_queries = ["marketing", "growth", "SaaS", "sales", "advertising", "SEO", "B2B
 news_br = ["marketing digital tendências", "vendas B2B", "Meta anúncios novidade"]
 news_us = ["marketing trends", "B2B sales", "SaaS growth"]
 
+# ----- Opcionais da pesquisa (sem eles, vale o padrão: últimos 7 dias, foco em potencial viral) -----
+# short: assunto curto usado nas mensagens do bot ("Pesquisando <short>"). Sem ele, usa subject.
+# short = "marketing e vendas"
+# scope: substitui a abertura do prompt de pesquisa. Use para uma pesquisa mais macro.
+# scope = """Pesquise na web as tendências e movimentos dos últimos 3 meses em marketing e vendas que
+# mudam a forma como empresas crescem, com dados e pesquisas recentes."""
+# mix: substitui a regra "pelo menos metade dos temas do tipo Novidade ou Aplicação prática".
+# mix = "Pelo menos metade dos temas do tipo Tendência ou Dados e pesquisa."
+# news_days: janela do Google News e do Hacker News, em dias (padrão 7).
+# news_days = 30
+# weights: pesos do ranking dos temas; só os informados mudam (padrão: momentum 0.40, novelty 0.25,
+# relevance 0.20, ownability 0.15). Para algo menos "hype" e mais macro, reduza momentum/novelty.
+# weights = { momentum = 0.25, novelty = 0.15, relevance = 0.35, ownability = 0.25 }
+
 [content]
 arcs = '''PENDENTE (ver o exemplo em brands/exemplo)'''
 illustration_hint = '''PENDENTE (ver o exemplo em brands/exemplo)'''
+# ----- Opcionais de texto (prevalecem sobre as regras genéricas e entram na revisão editorial) -----
+# copy: regras de copy dos slides da marca.
+# copy = """- Capa em forma de pergunta que o público faria.
+# - Nome da marca só no último slide."""
+# captions: regras de legenda da marca.
+# captions = """- Legenda sem tom de anúncio: começa pelo insight, não pela oferta.
+# - Sem hashtags no LinkedIn."""
 
 [visual]
 # Cores da marca em #RRGGBB. PENDENTE: substituir pela identidade visual da empresa.
@@ -61,6 +82,15 @@ font_regular = ""                      # ex.: "fonts/MinhaFonte-Regular.otf" (va
 font_medium = ""                       # ex.: "fonts/MinhaFonte-Medium.otf"
 logo_light = "logo/logo-light.svg"
 logo_dark = "logo/logo-dark.svg"
+# ----- Opcionais visuais -----
+# font_display / font_display_file: segunda fonte, só para títulos e números (display);
+# o texto corrido continua em font_family.
+# font_display = "Minha Display"
+# font_display_file = "fonts/MinhaDisplay-Regular.otf"
+# cover_photo: false = capa só com texto, no fundo da marca (a foto continua no CTA).
+# cover_photo = false
+# slide_counter: false = sem "01 / 09" no topo e sem barra de progresso (mostra o site no rodapé).
+# slide_counter = false
 photo_mood = "PENDENTE"
 
 [illustration]

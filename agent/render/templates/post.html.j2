@@ -14,6 +14,9 @@
 @font-face { font-family: "{{ v.font_family }}"; src: url("{{ assets }}/{{ v.font_regular }}"); font-weight: 400; }
 @font-face { font-family: "{{ v.font_family }}"; src: url("{{ assets }}/{{ v.font_medium or v.font_regular }}"); font-weight: 500; }
 {% endif %}
+{% if v.font_display_file %}
+@font-face { font-family: "{{ v.font_display }}"; src: url("{{ assets }}/{{ v.font_display_file }}"); font-weight: 400; }
+{% endif %}
 
 :root {
   --serene: {{ v.paper }};
@@ -60,6 +63,10 @@ h2 { font-weight: 400; font-size: 56px; line-height: 1.08; letter-spacing: -.025
 /* Bloco principal centralizado na vertical entre cabeçalho e rodapé (sem vão no meio do slide) */
 .stage { margin: auto 0; padding: 32px 0; }
 .statement { font-size: 32px; line-height: 1.32; letter-spacing: -.015em; }
+{% if v.font_display_file %}
+/* Fonte de display nos títulos e números; texto corrido segue na fonte da marca */
+h1, h2, .big, .metric, .statement { font-family: "{{ v.font_display }}", "{{ v.font_family }}", sans-serif; letter-spacing: -.01em; }
+{% endif %}
 
 .grid { display: grid; grid-template-columns: repeat(6, var(--col)); column-gap: var(--g); }
 .c1-3 { grid-column: 1 / 4; } .c4-6 { grid-column: 4 / 7; } .c1-4 { grid-column: 1 / 5; } .c5-6 { grid-column: 5 / 7; }
@@ -74,13 +81,14 @@ h2 { font-weight: 400; font-size: 56px; line-height: 1.08; letter-spacing: -.025
 {% macro head(i, dark=false) -%}
   <div class="top">
     <img class="logo" src="{{ assets }}/{{ v.logo_light if dark else v.logo_dark }}" alt="{{ brand_name }}">
-    <span class="micro">{{ '%02d' % (i + 1) }} / {{ '%02d' % total }}</span>
+    {% if slide_counter %}<span class="micro">{{ '%02d' % (i + 1) }} / {{ '%02d' % total }}</span>{% endif %}
   </div>
 {%- endmacro %}
 {% macro foot(i, s) -%}
   <div class="foot" style="margin-top: 72px;">
     <span class="src">{{ s.source or '' }}</span>
-    <div class="progress">{% for k in range(total) %}<i{% if k == i %} class="on"{% endif %}></i>{% endfor %}</div>
+    {% if slide_counter %}<div class="progress">{% for k in range(total) %}<i{% if k == i %} class="on"{% endif %}></i>{% endfor %}</div>
+    {% else %}<span class="micro">{{ site_url }}</span>{% endif %}
   </div>
 {%- endmacro %}
 {% macro title_block(n, s) -%}
@@ -93,12 +101,18 @@ h2 { font-weight: 400; font-size: 56px; line-height: 1.08; letter-spacing: -.025
 {% set n = i %}{# conteúdo numerado a partir de 01 (capa é o slide 0) #}
 
 {% if s.layout == 'cover' %}
+{% if cover_photo %}
 <section class="art" id="slide-{{ '%02d' % (i + 1) }}" data-layout="cover"{% if not photo_cover %} style="background: var(--ink);"{% endif %}>
   {% if photo_cover %}<img class="photo" src="{{ photo_cover }}" alt="">{% endif %}
   <div class="overlay" style="background: linear-gradient(180deg, rgba(var(--overlay),.60) 0%, rgba(var(--overlay),.42) 35%, rgba(var(--overlay),.48) 65%, rgba(var(--overlay),.80) 100%);"></div>
   <div class="pad dark">
+{% else %}
+{# Capa só com texto: fundo da marca, sem foto nem véu, logo escuro #}
+<section class="art" id="slide-{{ '%02d' % (i + 1) }}" data-layout="cover">
+  <div class="pad">
+{% endif %}
     <div class="top">
-      <img class="logo" src="{{ assets }}/{{ v.logo_light }}" alt="{{ brand_name }}">
+      <img class="logo" src="{{ assets }}/{{ v.logo_light if cover_photo else v.logo_dark }}" alt="{{ brand_name }}">
       <span class="micro">{{ kicker }}</span>
     </div>
     <div class="stage">
@@ -109,7 +123,7 @@ h2 { font-weight: 400; font-size: 56px; line-height: 1.08; letter-spacing: -.025
     </div>
     <div class="foot" style="margin-top: 0;">
       <span class="micro">{{ site_url }}</span>
-      <span class="micro" style="color: var(--serene);">{{ 'Toque para continuar →' if story else 'Arraste →' }}</span>
+      <span class="micro" style="color: var({{ '--serene' if cover_photo else '--ink' }});">{{ 'Toque para continuar →' if story else 'Arraste →' }}</span>
     </div>
   </div>
 </section>

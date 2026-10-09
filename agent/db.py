@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 CREATE TABLE IF NOT EXISTS chat_state (
   chat_id INTEGER PRIMARY KEY,
-  awaiting TEXT,                        -- direction | revision | NULL
+  awaiting TEXT,                        -- theme | direction | request | revision | schedule | NULL
   ref_id INTEGER
 );
 CREATE TABLE IF NOT EXISTS costs (

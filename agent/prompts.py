@@ -9,6 +9,8 @@ from .config import BRAND_DIR, BRAND_NAME, brand
 from .knowledge import core_knowledge, design_rules
 
 I, V, R, C = brand["identity"], brand["voice"], brand["research"], brand.get("content", {})
+# Regras de texto específicas da marca ([content] copy e captions); prevalecem sobre as genéricas.
+COPY_RULES, CAPTION_RULES = C.get("copy", "").strip(), C.get("captions", "").strip()
 PILLAR_NAMES = [p["name"] for p in brand.get("pillars", [])]
 
 
@@ -59,11 +61,21 @@ Nunca copie títulos, roteiros ou textos deles, e não use o tom deles quando el
 """ if _refs else "")
 
 
-RESEARCH = """Pesquise na web o que está em alta em """ + esc(R["subject"]) + """ nos ÚLTIMOS 7 DIAS.
+# Abertura do prompt de pesquisa: [research] scope no brand.toml substitui o padrão (curto prazo, viral).
+DEFAULT_SCOPE = ("Pesquise na web o que está em alta em " + R["subject"] + """ nos ÚLTIMOS 7 DIAS.
 
 Busque os assuntos com MAIS POTENCIAL VIRAL: o que está gerando conversa, compartilhamento e
 curiosidade agora (lançamentos de marcas grandes, novidades que mudam o dia a dia, comparativos,
-resultados surpreendentes). Os sinais de engajamento abaixo (views, curtidas, votos) mostram isso.
+resultados surpreendentes). Os sinais de engajamento abaixo (views, curtidas, votos) mostram isso.""")
+SCOPE = R.get("scope") or DEFAULT_SCOPE
+# Distribuição dos tipos de tema: [research] mix substitui a regra padrão.
+MIX = R.get("mix")
+TASK = ("Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco.\n" + esc(MIX)
+        if MIX else
+        'Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco, com\n'
+        'pelo menos metade deles do tipo "Novidade" ou "Aplicação prática".')
+
+RESEARCH = esc(SCOPE) + """
 
 """ + esc(R["priorities"]) + """
 
@@ -75,13 +87,12 @@ Temas já usados ou recusados recentemente (não repita nem proponha variação 
 
 {direction}
 
-Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco, com
-pelo menos metade deles do tipo "Novidade" ou "Aplicação prática".
+""" + TASK + """
 Seja econômico na busca: concentre-se nos temas com sinal mais forte acima e apure só o
 necessário para sustentar cada um.
 Para cada um:
-- angle: Novidade, Aplicação prática, Dados e pesquisa ou Mercado.
-- why_now: por que está em alta AGORA, citando sinais concretos (data do lançamento, volume, repercussão).
+- angle: Novidade, Aplicação prática, Tendência (movimento de médio prazo no setor), Dados e pesquisa ou Mercado.
+- why_now: por que o tema importa agora (datas, pesquisas, volume, repercussão).
 - data_points: 2 a 4 fatos verificáveis com URL da fonte primária (para novidades: o que foi
   lançado, para quem, desde quando, limites; números quando houver).
 - practical_uses: 2 a 4 aplicações práticas concretas no trabalho (o que alguém faz com isso amanhã).
@@ -136,7 +147,8 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
   texto curto e simples. Prefira "o que você ganha" a "como a tecnologia funciona".
 - Escreva para leigos inteligentes: nada de siglas sem explicação, nada de parágrafo técnico.
 - Pouco texto por slide; o layout centraliza o conteúdo, então frases curtas ficam melhores.
-
+""" + ("- Regras de copy da marca (prevalecem sobre as genéricas desta seção):\n" + esc(COPY_RULES) + "\n"
+       if COPY_RULES else "") + """
 # Estrutura
 - 7 a 9 slides no total: cover, 5 a 7 de conteúdo (um deles o illustration), cta.
 - eyebrow dos slides de conteúdo: só o rótulo do tema ("Adoção", "Custo"); o número é automático.
@@ -153,7 +165,8 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
 - caption_linkedin: mesmo conteúdo, um pouco mais analítica (até ~1.200 caracteres),
   parágrafos curtos, termina convidando para conversar com a """ + esc(BRAND_NAME) + """ ({site}). Até 3 hashtags.
 - Nenhuma legenda com travessão, exclamação, emoji em excesso (no máximo 0), ou frase de pôster.
-"""
+""" + ("- Regras de legenda da marca (prevalecem sobre as genéricas desta seção):\n" + esc(CAPTION_RULES) + "\n"
+       if CAPTION_RULES else "")
 
 
 EDITOR = """Você é o editor-chefe de conteúdo da """ + esc(BRAND_NAME) + """ Revise o post abaixo antes de ele ir para
@@ -165,7 +178,9 @@ aprovação humana. O padrão é ALTO: só aprove o que você publicaria no perf
 # Post (JSON)
 {current}
 
-# Critérios (nota 0 a 10 cada)
+""" + ("# Regras de copy da marca (valem para os critérios 1, 2, 3, 5 e 7 e prevalecem sobre o padrão genérico)\n"
+       + esc("\n".join(x for x in (COPY_RULES, CAPTION_RULES) if x)) + "\n\n"
+       if COPY_RULES or CAPTION_RULES else "") + """# Critérios (nota 0 a 10 cada)
 1. Capa viral: o título faz parar o dedo em 2 segundos, traz o benefício ou a curiosidade e o nome
    da novidade, sem ser apelativo ou mentiroso (padrão: \"""" + esc(V["cover_example"]) + """\").
 2. Clareza e progressão: uma ideia por slide, sequência lógica, nada repetido, nada genérico.
