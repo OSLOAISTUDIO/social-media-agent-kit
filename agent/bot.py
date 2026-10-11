@@ -318,7 +318,8 @@ async def send_captions(ctx, chat_id: int, c: dict, part=None):
         await call()
     part = part or plain
     await part("legenda Instagram", lambda: say(ctx, chat_id, f"<b>Legenda Instagram</b>\n\n{e(c['caption_instagram'])}"))
-    await part("legenda LinkedIn", lambda: say(ctx, chat_id, f"<b>Legenda LinkedIn</b>\n\n{e(c['caption_linkedin'])}"))
+    if "linkedin" in cfg.networks:
+        await part("legenda LinkedIn", lambda: say(ctx, chat_id, f"<b>Legenda LinkedIn</b>\n\n{e(c['caption_linkedin'])}"))
 
 
 def post_cost(p: dict) -> dict[str, float]:
@@ -361,7 +362,8 @@ async def send_approval(ctx, chat_id: int, post_id: int, failed: list[str] | Non
     srcs = post_sources(t["payload"], c)
     if srcs:
         note += "\n\n<b>Fontes deste post</b>\n" + "\n".join(srcs)
-    await say(ctx, chat_id, f"Aprova este post para Instagram e LinkedIn?{note}", post_kb(post_id))
+    nets = " e ".join(n.capitalize() if n != "linkedin" else "LinkedIn" for n in cfg.networks)
+    await say(ctx, chat_id, f"Aprova este post para {nets}?{note}", post_kb(post_id))
 
 
 def post_sources(topic: dict, content: dict) -> list[str]:
@@ -454,8 +456,9 @@ async def do_publish(ctx, chat_id: int, post_id: int, mode: str, when: datetime 
     else:
         resumo = f"Agendado no {via} para {fmt(when)}"
     vid = " com o slide animado em vídeo" if p["content"]["_render"].get("video") else ""
+    li = " e o post do LinkedIn" if "linkedin" in cfg.networks else ""
     await say(ctx, chat_id, f"Feito. {resumo}: carrossel no Instagram{vid}, {out['stories']} stories "
-                            f"(mesmos slides do feed) e o post do LinkedIn ({len(out['posts'])} publicações).\n"
+                            f"(mesmos slides do feed){li} ({len(out['posts'])} publicações).\n"
                             f"<b>Custo final do post</b>\n{cost_lines(post_cost(p))}")
     t = db.topic(p["topic_id"])
     if t["week_id"]:
@@ -1036,9 +1039,12 @@ async def on_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     intent = await llm.structured(prompts.ROLE, prompts.INTENT.format(text=text), Intent, fast=True)
     if intent.kind == "new_post" and xarm.mode() == "only":
-        background(ctx, chat_id, make_tweet(ctx, chat_id, xarm.seed_request(intent.brief)), "escrever o tweet")
+        background(ctx, chat_id, make_tweet(ctx, chat_id, xarm.seed_request(
+            text if research.is_reference(text) else intent.brief)), "escrever o tweet")
     elif intent.kind == "new_post":
-        background(ctx, chat_id, run_research(ctx, chat_id, week_id=None, slots=1, request=intent.brief,
+        # Com link, vídeo ou texto de referência, vale a mensagem inteira (o resumo perderia o material).
+        brief = text if research.is_reference(text) else intent.brief
+        background(ctx, chat_id, run_research(ctx, chat_id, week_id=None, slots=1, request=brief,
                                               label_prefix="Proposta"), "apurar o pedido")
     elif intent.kind == "direction":
         w = db.get_or_create_week(week_start())

@@ -2,6 +2,8 @@
 # Atualiza esta instalação com a versão mais nova do kit (patch do repositório público).
 #
 # Uso:  ./scripts/update.sh            última versão publicada (branch main do kit)
+#       Primeira vez (instalação sem este script), na pasta da instalação:
+#       zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOTEAM/social-media-agent-kit/main/scripts/update.sh)
 #       ./scripts/update.sh v1.1.0     uma versão específica (tag)
 #       ./scripts/update.sh --push     atualiza e já envia ao GitHub da empresa (o Railway faz o deploy)
 #
@@ -9,7 +11,8 @@
 # reescrever o histórico da empresa), instala dependências novas, roda os testes e mostra o que mudou
 # e as variáveis novas a cadastrar. O pacote da marca (brands/<slug>/) nunca é tocado pelo kit.
 set -e
-cd "$(dirname "$0")/.."
+# Roda na raiz do repositório da instalação (também quando chamado pelo curl, sem arquivo local)
+cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 KIT_URL="https://github.com/OSLOTEAM/social-media-agent-kit.git"
 VENV="$HOME/.venvs/social-media-agent"
 REF="main"; PUSH=0
@@ -43,17 +46,26 @@ if ! git merge --no-edit -m "Atualiza o kit para a versão $NEW" "$TARGET"; then
   exit 1
 fi
 
+TESTS_OK=1
 if [[ -x "$VENV/bin/pip" ]]; then
   echo "Instalando dependências novas..."
   "$VENV/bin/pip" install -q -r requirements.txt
   echo "Rodando os testes..."
-  "$VENV/bin/python" -m tests.test_pipeline >/dev/null && "$VENV/bin/python" -m tests.test_agents >/dev/null \
-    && echo "  ✓ testes ok" || { echo "  ✗ testes falharam: rode ./run.sh test para ver o detalhe"; exit 1; }
+  if "$VENV/bin/python" -m tests.test_agents >/dev/null 2>&1; then
+    echo "  ✓ testes dos agentes ok"
+  else
+    TESTS_OK=0; echo "  ✗ testes dos agentes falharam: rode ./run.sh test para ver o detalhe"
+  fi
+  "$VENV/bin/python" -m tests.test_pipeline >/dev/null 2>&1 && echo "  ✓ teste do pipeline ok" || \
+    echo "  ! teste do pipeline falhou (pode ser teste antigo, específico da marca): confira com ./run.sh test"
 fi
 
 echo "\n===== O que mudou ($OLD → $NEW) ====="
 awk -v v="$NEW" '$0 ~ "^## "v {p=1; print; next} p && /^## / {exit} p' CHANGELOG.md
-if (( PUSH )); then
+if (( PUSH && ! TESTS_OK )); then
+  echo "\nNão enviei ao GitHub porque os testes dos agentes falharam. Corrija e rode: git push origin HEAD"
+  exit 1
+elif (( PUSH )); then
   git push origin HEAD
   echo "\nEnviado ao GitHub da empresa: o Railway começa o deploy (se estiver conectado ao repositório)."
 else

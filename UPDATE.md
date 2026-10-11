@@ -13,6 +13,13 @@ Na pasta da instalação da empresa:
 ./scripts/set_secrets.sh agent ANTHROPIC_API_KEY
 ```
 
+Instalação que ainda não tem o `update.sh` (versões 1.0.x): rode a primeira atualização direto do GitHub,
+na pasta da instalação:
+
+```bash
+zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOTEAM/social-media-agent-kit/main/scripts/update.sh) --push
+```
+
 1. `update.sh` busca o kit, junta a versão nova com o histórico da empresa (git merge), instala as
    dependências, roda os testes, mostra o que mudou e, com `--push`, envia ao GitHub da empresa. Se
    o Railway estiver conectado a esse repositório, o deploy começa sozinho. Sem `--push`, revise e

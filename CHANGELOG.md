@@ -2,6 +2,14 @@
 
 Para atualizar uma instalação existente: [UPDATE.md](UPDATE.md) (em resumo, `./scripts/update.sh`).
 
+## 1.1.1 · 2026-10-11
+
+- `update.sh` roda de qualquer pasta da instalação e também direto do GitHub, para quem ainda não tem o
+  script: `zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOTEAM/social-media-agent-kit/main/scripts/update.sh) --push`.
+  Se os testes dos agentes falharem, não envia ao GitHub (a versão nova fica no commit local para conferir).
+- Pedido livre com link, vídeo ou texto de referência usa a mensagem inteira (o resumo perdia o link).
+- Mensagens de aprovação e publicação respeitam `PUBLISH_NETWORKS` (LinkedIn opcional).
+
 ## 1.1.0 · 2026-10-11
 
 **Agent Revisor (Claude Sonnet 5.5).** Confere cada etapa antes de ela chegar ao humano, com no
