@@ -43,7 +43,7 @@ def candidates_for(slots: int) -> int:
 
 
 # Pesos do ranking: neutros por padrão; [research] weights no brand.toml sobrescreve os informados.
-WEIGHTS = {"momentum": 0.25, "novelty": 0.25, "relevance": 0.25, "ownability": 0.25} | R.get("weights", {})
+WEIGHTS = {"momentum": 0.40, "novelty": 0.25, "relevance": 0.20, "ownability": 0.15} | R.get("weights", {})
 
 
 async def _hacker_news(client: httpx.AsyncClient) -> list[str]:

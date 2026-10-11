@@ -29,6 +29,8 @@ if not (BRAND_DIR / "brand.toml").exists():
     raise SystemExit(f"Pacote de marca não encontrado: {BRAND_DIR}/brand.toml (BRAND={BRAND_SLUG})")
 brand: dict = tomllib.loads((BRAND_DIR / "brand.toml").read_text(encoding="utf-8"))
 BRAND_NAME: str = brand["identity"]["name"]
+# Tema-macro da marca (definido no setup): o revisor confere se cada tema está dentro dele.
+MACRO_THEME: str = brand["research"]["subject"]
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,26 @@ class Config:
     # ChatGPT Images 2: usado no slide de ilustração/diagrama de todo post
     illustration_model: str = _env("OPENAI_ILLUSTRATION_MODEL", "gpt-image-2")
     illustration_quality: str = _env("OPENAI_ILLUSTRATION_QUALITY", "high")
+
+    # Claude (Anthropic): Revisor (Sonnet) e Agent Vídeo (Opus). Sem a chave, os dois ficam desligados.
+    anthropic_api_key: str = _env("ANTHROPIC_API_KEY")
+    reviewer: str = _env("REVIEWER", "on").lower()  # on | off
+    reviewer_model: str = _env("REVIEWER_MODEL", "claude-sonnet-5-5")
+    reviewer_effort: str = _env("REVIEWER_EFFORT", "medium")
+    video_mode: str = _env("VIDEO_MODE", "auto").lower()  # auto (o agente decide) | off | always
+    video_model: str = _env("VIDEO_MODEL", "claude-opus-5-5")
+    video_effort: str = _env("VIDEO_EFFORT", "high")
+    video_seconds: int = int(_env("VIDEO_SECONDS", "8"))
+
+    # Frente X (Twitter). Valores iniciais: o /x no Telegram muda e guarda no banco.
+    x_mode: str = _env("X_MODE", "off").lower()  # off | on (junto com Instagram/LinkedIn) | only (só X)
+    x_tweets_per_week: int = int(_env("X_TWEETS_PER_WEEK", "5"))
+    x_language: str = _env("X_LANGUAGE", "direta")
+    x_tone: str = _env("X_TONE", "opinião forte")
+    x_time: str = _env("X_TIME", "11:00")  # hora em que o agente prepara os tweets do dia
+    x_slots: list[str] = field(default_factory=lambda: _list("X_SLOTS") or ["12:30", "18:30"])
+    x_max_chars: int = int(_env("X_MAX_CHARS", "280"))
+    buffer_x_channel: str = _env("BUFFER_X_CHANNEL_ID")
 
     # Apify (sinais de tendência: Google Trends, Reddit, X; ver apify_sources.json)
     apify_token: str = _env("APIFY_TOKEN")

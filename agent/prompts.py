@@ -64,19 +64,20 @@ Nunca copie títulos, roteiros ou textos deles, e não use o tom deles quando el
 # Abertura do prompt de pesquisa. O único foco padrão é o tema-macro da marca ([research] subject,
 # definido no setup); [research] scope substitui este texto.
 NEWS_DAYS = int(R.get("news_days", 7))
-DEFAULT_SCOPE = (f"Pesquise na web o que está em alta em {R['subject']} nos últimos {NEWS_DAYS} dias: "
-                 "os assuntos que estão gerando conversa e interesse no público da marca. Os sinais de "
-                 "engajamento abaixo (views, curtidas, votos, matérias) ajudam a medir isso.")
-DEFAULT_PRIORITIES = (f"PRIORIDADE: o que é novo, relevante e útil para o público da marca dentro de "
-                      f"{R['subject']}. Use fontes primárias com data e inclua fontes do país do público "
-                      "quando houver.")
+DEFAULT_SCOPE = (f"Pesquise na web o que está em alta em {R['subject']} nos ÚLTIMOS {NEWS_DAYS} DIAS.\n\n"
+                 "Busque os assuntos com MAIS POTENCIAL VIRAL: o que está gerando conversa, compartilhamento e\n"
+                 "curiosidade agora (lançamentos de marcas grandes, novidades que mudam o dia a dia, comparativos,\n"
+                 "resultados surpreendentes). Os sinais de engajamento abaixo (views, curtidas, votos) mostram isso.")
+DEFAULT_PRIORITIES = (f"PRIORIDADE: novidades e lançamentos dentro de {R['subject']} com aplicação prática "
+                      "para o público da marca, depois dados e pesquisas que dão contexto. Use fontes primárias "
+                      "com data e inclua fontes do país do público quando houver.")
 SCOPE = R.get("scope") or DEFAULT_SCOPE
 # Distribuição dos tipos de tema: [research] mix substitui a regra padrão.
 MIX = R.get("mix")
 TASK = ("Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco.\n" + esc(MIX)
         if MIX else
-        "Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco, "
-        "variando os tipos de tema.")
+        "Tarefa: devolva exatamente {n} candidatos, ordenados do mais forte para o mais fraco, com\n"
+        'pelo menos metade deles do tipo "Novidade" ou "Aplicação prática".')
 
 RESEARCH = esc(SCOPE) + """
 
@@ -96,7 +97,8 @@ necessário para sustentar cada um.
 Para cada um:
 - angle: Novidade, Aplicação prática, Tendência (movimento de médio prazo no setor), Dados e pesquisa ou Mercado.
 - why_now: por que o tema importa agora (datas, pesquisas, volume, repercussão).
-- data_points: 2 a 4 fatos verificáveis com URL da fonte primária (números e datas quando houver).
+- data_points: 2 a 4 fatos verificáveis com URL da fonte primária (para novidades: o que foi
+  lançado, para quem, desde quando, limites; números quando houver).
 - practical_uses: 2 a 4 aplicações práticas concretas no trabalho (o que alguém faz com isso amanhã).
 - narrative: a pegada narrativa do post (gancho da capa, formato, tom), inspirada no que funcionou
   nas referências editoriais, traduzida para a voz """ + esc(BRAND_NAME) + """; cite qual referência inspirou, se houver.
@@ -104,7 +106,7 @@ Para cada um:
   público da marca), 3 a 5 frases.
 - outline: roteiro slide a slide (capa, 5 a 7 slides de conteúdo incluindo 1 ilustração, CTA).
 - pillar: exatamente um destes pilares da """ + esc(BRAND_NAME) + """: """ + esc("; ".join(PILLAR_NAMES)) + """.
-- scores: momentum (= tração: quanto está gerando conversa e engajamento agora), novelty,
+- scores: momentum (= potencial viral: quanto está gerando conversa e engajamento agora), novelty,
   relevance, ownability (0 a 10), com honestidade.
 Evite temas sem consequência prática para o público da marca."""
 
@@ -118,7 +120,7 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
 {design}
 
 # Layouts disponíveis
-- cover: SEMPRE o primeiro. tag (ex.: "Em alta", "Novo dado"), eyebrow (assunto),
+- cover: SEMPRE o primeiro. tag (ex.: "Em alta", "Lançamento", "Novo dado"), eyebrow (assunto),
   title (display, até ~45 caracteres, pode usar "\\n" para quebrar em 2 linhas), lead (até ~140 caracteres).
 - big_number: title (H2, até ~55 caracteres), big (número curto: "−29%", "3×", "US$ 4 bi"),
   body (o que o número significa, até ~120 caracteres), source.
@@ -142,7 +144,7 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
   O template adiciona o botão \"""" + esc(I["cta_button"]) + """\" e os pilares da marca.
 
 # Copy dos slides (o mais importante)
-- Capa: título com gancho forte e benefício claro para o público, no tom da marca
+- Capa: título com gancho viral, benefício claro e nome da novidade quando houver, no tom da marca
   (ex.: \"""" + esc(V["cover_example"]) + """\").
   Até ~70 caracteres, pode quebrar em 2 ou 3 linhas com "\n". Lead curto que aumenta a curiosidade.
 - Cada slide de conteúdo: título que se entende sozinho e prende (pergunta, contraste, resultado),
@@ -162,7 +164,7 @@ CONTENT = """Crie o post completo (carrossel + legendas) para o tema aprovado ab
   dado, fato ou fonte de fora delas.
 
 # Legendas
-- caption_instagram: curta, direta, não preguiçosa, no tom da marca. 1 frase de abertura
+- caption_instagram: curta, direta, não preguiçosa, no tom viral sem apelação. 1 frase de abertura
   que prende (benefício ou curiosidade), 2 a 4 frases simples com a ideia central e o que isso muda
   para o leitor, chamada final para o link da bio. Até 3 hashtags específicas no fim.
 - caption_linkedin: mesmo conteúdo, um pouco mais analítica (até ~1.200 caracteres),
@@ -185,8 +187,8 @@ aprovação humana. O padrão é ALTO: só aprove o que você publicaria no perf
 """ + ("# Regras de copy da marca (valem para os critérios 1, 2, 3, 5 e 7 e prevalecem sobre o padrão genérico)\n"
        + esc("\n".join(x for x in (COPY_RULES, CAPTION_RULES) if x)) + "\n\n"
        if COPY_RULES or CAPTION_RULES else "") + """# Critérios (nota 0 a 10 cada)
-1. Capa: o título faz parar o dedo em 2 segundos e traz o benefício ou a curiosidade, sem ser
-   apelativo ou mentiroso (padrão: \"""" + esc(V["cover_example"]) + """\").
+1. Capa viral: o título faz parar o dedo em 2 segundos, traz o benefício ou a curiosidade e o nome
+   da novidade, sem ser apelativo ou mentiroso (padrão: \"""" + esc(V["cover_example"]) + """\").
 2. Clareza e progressão: uma ideia por slide, sequência lógica, nada repetido, nada genérico.
 3. Utilidade prática: o leitor sai sabendo o que fazer com isso, com exemplos concretos.
 4. Precisão: todo número e fato bate com as fontes do tema; nada inventado; fontes nos slides com dado.
@@ -280,3 +282,27 @@ Para cada um:
 - pillar: exatamente um destes pilares da """ + esc(BRAND_NAME) + """: """ + esc("; ".join(PILLAR_NAMES)) + """.
 - sources: SOMENTE as referências enviadas (nome = título do link ou do vídeo; url = o link enviado).
 - scores: momentum, novelty, relevance, ownability (0 a 10), com honestidade."""
+
+
+CAPTIONS = """Escreva novas legendas para o post abaixo (os slides não mudam).
+
+# Tema
+{topic}
+
+# Slides do post
+{post}
+
+# Legendas atuais
+{current}
+
+# Orientação
+{direction}
+
+Mesmas regras de legenda do post:
+- caption_instagram: curta e direta, 1 frase de abertura que prende (benefício ou curiosidade),
+  2 a 4 frases simples com a ideia central e o que muda para o leitor, chamada para o link da bio,
+  até 3 hashtags específicas no fim.
+- caption_linkedin: mesmo conteúdo, um pouco mais analítica (até ~1.200 caracteres), parágrafos curtos,
+  termina convidando para conversar com a marca, até 3 hashtags.
+- Sem travessão, sem exclamação, sem citar fontes ou links de fontes (as fontes vão só no Telegram).
+""" + ("- Regras de legenda da marca (prevalecem):\n" + esc(CAPTION_RULES) + "\n" if CAPTION_RULES else "")

@@ -1,5 +1,5 @@
 {
-  "_comment": "Fontes de tendência rodadas via Apify a cada pesquisa (opcional, exige APIFY_TOKEN). 'format': google_trends | reddit | x | generic. Para desligar uma fonte: enabled false. O setup preenche os termos com o tema-macro; o Reddit fica desligado até você listar as comunidades do tema em startUrls (ex.: https://www.reddit.com/r/<comunidade>/top/?t=week).",
+  "_comment": "Fontes de tendência rodadas via Apify a cada pesquisa (opcional, exige APIFY_TOKEN). 'format': google_trends | reddit | x | generic. Para desligar uma fonte: enabled false. O setup coloca o tema-macro primeiro; os termos e comunidades de marketing e vendas são um ponto de partida: troque pelos do seu setor (Reddit: https://www.reddit.com/r/<comunidade>/top/?t=week).",
   "sources": [
     {
       "name": "Google Trends",
@@ -8,7 +8,10 @@
       "format": "google_trends",
       "input": {
         "searchTerms": [
-          "__TEMA__"
+          "__TEMA__",
+          "marketing digital",
+          "tráfego pago",
+          "CRM"
         ],
         "timeRange": "now 7-d",
         "geo": "BR",
@@ -16,12 +19,28 @@
       }
     },
     {
-      "name": "Reddit",
-      "enabled": false,
+      "name": "Reddit (comunidades de marketing e vendas)",
+      "enabled": true,
       "actor": "trudax/reddit-scraper-lite",
       "format": "reddit",
       "input": {
-        "startUrls": [],
+        "startUrls": [
+          {
+            "url": "https://www.reddit.com/r/marketing/top/?t=week"
+          },
+          {
+            "url": "https://www.reddit.com/r/sales/top/?t=week"
+          },
+          {
+            "url": "https://www.reddit.com/r/SaaS/top/?t=week"
+          },
+          {
+            "url": "https://www.reddit.com/r/digital_marketing/top/?t=week"
+          },
+          {
+            "url": "https://www.reddit.com/r/startups/top/?t=week"
+          }
+        ],
         "sort": "top",
         "time": "week",
         "maxItems": 40,
@@ -38,7 +57,9 @@
       "format": "x",
       "input": {
         "searchTerms": [
-          "\"__TEMA__\" min_faves:100 -filter:replies"
+          "\"__TEMA__\" min_faves:100 -filter:replies",
+          "(marketing OR \"B2B sales\" OR \"SaaS growth\") min_faves:500 -filter:replies",
+          "(marketing OR vendas OR \"tráfego pago\") min_faves:200 lang:pt -filter:replies"
         ],
         "sort": "Top",
         "maxItems": 60

@@ -36,8 +36,9 @@ O kit não traz tema de conteúdo pré-definido: o setup pergunta o **tema-macro
 |---|---|---|
 | Railway | servidor 24/7 | plano Hobby, cerca de US$ 5/mês |
 | OpenAI (API) | pesquisa, escrita, ilustrações | cerca de US$ 0,20 a 0,40 por post |
+| Anthropic (API) | Revisor (Claude Sonnet) e Agent Vídeo (Claude Opus) | cerca de US$ 0,10 a 0,60 por post |
 | Apify | Google Trends, Reddit, X, Instagram | plano grátis (US$ 5/mês de crédito) |
-| Buffer | publicar no Instagram e LinkedIn | grátis até 3 canais |
+| Buffer | publicar no Instagram, LinkedIn e X | grátis até 3 canais |
 | Supabase | hospedar as imagens para o Buffer | grátis |
 | Telegram | bot de aprovação + grupo do time | grátis |
 
@@ -114,7 +115,9 @@ Sem as chaves, o serviço sobe e fica aguardando (não entra em loop de erro).
    e marcadores de colagem que o terminal mande junto são limpos automaticamente.
 3. No grupo, mandar `/start@<bot>`: o bot responde o ID do grupo. Rodar o script de novo só com
    `TELEGRAM_ALLOWED_CHAT_IDS` (grupo primeiro, IDs pessoais depois, separados por vírgula).
-4. Conferir todas as conexões e criar o bucket público do Supabase:
+4. Frente X (opcional): conectar o perfil do X no Buffer e, no Telegram, ligar em `/x` (modo,
+   tweets por semana, linguagem e tom).
+5. Conferir todas as conexões e criar o bucket público do Supabase:
    ```bash
    railway run --service agent ~/.venvs/social-media-agent/bin/python -m scripts.check_setup --fix
    ```
@@ -132,6 +135,6 @@ confirma no grupo com os links ou avisa o que falhou.
 
 ## Atualizações
 
-O código é o mesmo para todas as marcas. Depois de melhorar o motor, cada empresa recebe a versão
-nova com um `railway up` na conta dela (ou pelo deploy automático do GitHub, se o Railway do
-cliente tiver acesso ao repositório).
+O código é o mesmo para todas as marcas. Cada versão nova do kit sai como patch (tag + CHANGELOG);
+na instalação da empresa, `./scripts/update.sh --push` junta a versão nova, roda os testes e envia ao
+GitHub da empresa, e o Railway faz o deploy. Detalhes e caminho sem git: [UPDATE.md](UPDATE.md).

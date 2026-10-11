@@ -13,6 +13,7 @@ if [[ "$1" == "setup" ]]; then
   exit 0
 fi
 if [[ "$1" == "test" ]]; then
-  exec "$VENV/bin/python" -m tests.test_pipeline
+  "$VENV/bin/python" -m tests.test_pipeline
+  exec "$VENV/bin/python" -m tests.test_agents
 fi
 exec "$VENV/bin/python" -m agent.main

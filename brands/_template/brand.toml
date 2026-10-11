@@ -43,11 +43,13 @@ desc = "PENDENTE"
 subject = "__TEMA__"
 short = "__TEMA__"                       # versão curta, usada nas mensagens do bot
 # Consultas de sinais (Hacker News e Google News). Vazias = usa o tema-macro.
-hn_queries = ["__TEMA_EN__"]         # em inglês (Hacker News é em inglês); vazio = tema-macro
-news_br = ["__TEMA__"]
-news_us = ["__TEMA_EN__"]
+# O tema-macro entra primeiro; as consultas de marketing e vendas abaixo são um ponto de partida:
+# troque pelas do seu setor.
+hn_queries = ["__TEMA_EN__", "marketing", "growth", "SaaS", "sales", "advertising", "SEO", "B2B"]
+news_br = ["__TEMA__", "marketing digital tendências", "vendas B2B", "Meta anúncios novidade"]
+news_us = ["__TEMA_EN__", "marketing trends", "B2B sales", "SaaS growth"]
 
-# ----- Opcionais da pesquisa (sem eles: últimos 7 dias, tudo dentro do tema-macro, pesos iguais) -----
+# ----- Opcionais da pesquisa (sem eles: últimos 7 dias, foco em potencial viral e novidade) -----
 # priorities: o que priorizar dentro do tema (ex.: novidades, aplicações práticas, dados).
 # priorities = """PRIORIDADE: 1. ... 2. ... 3. ..."""
 # scope: substitui a abertura do prompt de pesquisa (ex.: janela maior, olhar mais macro).
@@ -56,8 +58,9 @@ news_us = ["__TEMA_EN__"]
 # mix = "Pelo menos metade dos temas do tipo Tendência ou Dados e pesquisa."
 # news_days: janela do Google News e do Hacker News, em dias (padrão 7).
 # news_days = 30
-# weights: pesos do ranking dos temas (padrão: 0.25 cada); só os informados mudam.
-# weights = { momentum = 0.40, novelty = 0.25, relevance = 0.20, ownability = 0.15 }
+# weights: pesos do ranking dos temas; só os informados mudam (padrão: momentum 0.40, novelty 0.25,
+# relevance 0.20, ownability 0.15). Para algo menos "hype" e mais macro, reduza momentum/novelty.
+# weights = { momentum = 0.25, novelty = 0.15, relevance = 0.35, ownability = 0.25 }
 
 [content]
 # ----- Opcionais de texto (prevalecem sobre as regras genéricas e entram na revisão editorial) -----

@@ -20,8 +20,8 @@ class DataPoint(BaseModel):
 
 
 class Scores(BaseModel):
-    momentum: int = Field(description="0-10. Tração: quanto o tema está gerando conversa, compartilhamento e engajamento agora")
-    novelty: int = Field(description="0-10. Quão novo é o assunto: algo dos últimos dias = 9-10; tema recorrente = 3-5")
+    momentum: int = Field(description="0-10. Potencial viral: quanto o tema está gerando conversa, compartilhamento e engajamento AGORA")
+    novelty: int = Field(description="0-10. Quão nova é a novidade: lançamento ou recurso dos últimos dias = 9-10; dado/pesquisa sem novidade de produto = 3-5")
     relevance: int = Field(description="0-10. Relevância para o público da marca")
     ownability: int = Field(description="0-10. Quanto a marca tem autoridade para falar e conectar com sua oferta")
 
@@ -30,7 +30,7 @@ class TopicProposal(BaseModel):
     title: str = Field(description="Nome curto do tema")
     headline: str = Field(description="Título provisório da capa, no tom da marca")
     angle: Literal["Novidade", "Aplicação prática", "Tendência", "Dados e pesquisa", "Mercado"] = Field(
-        description="Tipo de post: novidade (algo novo no tema), aplicação prática (como usar no dia a dia), "
+        description="Tipo de post: novidade (lançamento/recurso novo), aplicação prática (como usar no dia a dia), "
                     "tendência (movimento de médio prazo no setor), dados e pesquisa, ou mercado")
     practical_uses: list[str] = Field(description="2 a 4 aplicações práticas concretas no dia a dia de trabalho (o que alguém faz com isso amanhã)")
     narrative: str = Field(description="Pegada narrativa: gancho, formato e tom do post, inspirados nas referências editoriais, na voz da marca")
@@ -91,7 +91,7 @@ class Slide(BaseModel):
     x_labels: list[str] | None = Field(description="Rótulos do eixo X: primeiro e último (layout line)")
     visual_brief: str | None = Field(description="Layout illustration: o que o diagrama mostra (elementos, relações, fluxo), em 2 a 4 frases")
     visual_labels: list[str] | None = Field(description="Layout illustration: rótulos exatos dentro do diagrama, até 6, no máximo 3 palavras cada")
-    tag: str | None = Field(description="Tag retangular da capa, ex.: 'Em alta', 'Novo dado'")
+    tag: str | None = Field(description="Tag retangular da capa, ex.: 'Em alta', 'Lançamento', 'Novo dado'")
     source: str | None = Field(description="Fonte do dado exibida no rodapé, ex.: 'Fonte: Veículo, 2026.'")
 
 
@@ -129,3 +129,8 @@ class EditorialReview(BaseModel):
     issues: list[str] = Field(description="Problemas concretos encontrados, slide a slide")
     approved: bool = Field(description="true só se TODOS os critérios tiverem nota 8 ou mais")
     content: PostContent = Field(description="Versão revisada do post (igual à original se approved=true)")
+
+
+class Captions(BaseModel):
+    caption_instagram: str
+    caption_linkedin: str

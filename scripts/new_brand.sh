@@ -29,11 +29,15 @@ d = Path(d)
 def toml_str(v: str) -> str:  # conteúdo de string TOML entre aspas
     return v.replace("\\", "\\\\").replace('"', '\\"')
 
-en_list = f'["{toml_str(tema_en)}"]' if tema_en else "[]"
 for f in (d / "brand.toml", d / "knowledge" / "marca.md"):
     s = f.read_text(encoding="utf-8")
     s = s.replace("__SLUG__", slug).replace("__NOME__", nome)
-    s = s.replace('["__TEMA_EN__"]', en_list).replace("__TEMA__", toml_str(tema) if f.suffix == ".toml" else tema)
+    # tema em inglês: entra no lugar do marcador; sem ele, o marcador sai da lista
+    if tema_en:
+        s = s.replace("__TEMA_EN__", toml_str(tema_en))
+    else:
+        s = s.replace('"__TEMA_EN__", ', "").replace('["__TEMA_EN__"]', "[]")
+    s = s.replace("__TEMA__", toml_str(tema) if f.suffix == ".toml" else tema)
     f.write_text(s, encoding="utf-8")
 
 def fill(x):  # troca o marcador nos termos das fontes do Apify (JSON)

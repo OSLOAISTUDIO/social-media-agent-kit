@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY,
   topic_id INTEGER NOT NULL,
   version INTEGER NOT NULL DEFAULT 1,
-  status TEXT NOT NULL,                 -- review | changes | approved | published | failed
+  status TEXT NOT NULL,                 -- review | changes | superseded | approved | published | failed
   content TEXT NOT NULL,                -- JSON: slides + legendas
   render_dir TEXT,
   feedback TEXT,
@@ -43,16 +43,32 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 CREATE TABLE IF NOT EXISTS chat_state (
   chat_id INTEGER PRIMARY KEY,
-  awaiting TEXT,                        -- theme | direction | request | revision | schedule | NULL
+  awaiting TEXT,                        -- theme | direction | request | revision | schedule | caption |
+                                        -- tweet_dir | tweet_when | tweet_request | NULL
   ref_id INTEGER
 );
 CREATE TABLE IF NOT EXISTS costs (
   id INTEGER PRIMARY KEY,
-  kind TEXT NOT NULL,                   -- research (ref = batch) | post (ref = post id)
+  kind TEXT NOT NULL,                   -- research (ref = batch) | post (ref = post id) | tweet (ref = tweet id)
   ref TEXT NOT NULL,
   usd REAL NOT NULL,
-  detail TEXT,                          -- JSON: chamadas, tokens, buscas, imagens
+  detail TEXT,                          -- JSON: chamadas, tokens, buscas, imagens, agents (custo por agente)
   created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS tweets (
+  id INTEGER PRIMARY KEY,
+  week_start TEXT NOT NULL,             -- semana da cota de tweets
+  post_id INTEGER,                      -- post do Instagram/LinkedIn que originou (NULL = autônomo)
+  status TEXT NOT NULL,                 -- review | approved | published | discarded | failed
+  text TEXT NOT NULL,
+  payload TEXT,                         -- JSON: ângulo, fonte, briefing, revisor
+  buffer TEXT,                          -- JSON: publicação no Buffer
+  created_at TEXT NOT NULL,
+  published_at TEXT
+);
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,                 -- ex.: x_mode, x_tweets_per_week (mudados pelo /x)
+  value TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS chat_alias (
   old_id INTEGER PRIMARY KEY,           -- grupo comum autorizado no .env
@@ -249,3 +265,78 @@ def topic_posts_cost(topic_id: int) -> float:
 def cost_since(iso_date: str) -> float:
     r = row("SELECT COALESCE(SUM(usd), 0) AS v FROM costs WHERE created_at >= ?", iso_date)
     return r["v"] if r else 0.0
+
+
+def _split(sql: str, *args) -> dict[str, float]:
+    """Soma o custo por agente (openai, reviewer, video) das linhas de custo selecionadas.
+    Registros antigos, sem a divisão, contam como OpenAI."""
+    out: dict[str, float] = {}
+    for r in rows(sql, *args):
+        det = json.loads(r["detail"] or "{}")
+        agents = det.get("agents") or {"openai": r["usd"]}
+        for k, v in agents.items():
+            out[k] = out.get(k, 0.0) + v
+    return out
+
+
+def cost_split(kind: str, ref) -> dict[str, float]:
+    return _split("SELECT usd, detail FROM costs WHERE kind = ? AND ref = ?", kind, str(ref))
+
+
+def topic_posts_split(topic_id: int) -> dict[str, float]:
+    return _split("SELECT c.usd, c.detail FROM costs c JOIN posts p ON c.kind = 'post' AND c.ref = CAST(p.id AS TEXT) "
+                  "WHERE p.topic_id = ?", topic_id)
+
+
+def split_since(iso_date: str) -> dict[str, float]:
+    return _split("SELECT usd, detail FROM costs WHERE created_at >= ?", iso_date)
+
+
+def merge(*splits: dict[str, float]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for sp in splits:
+        for k, v in sp.items():
+            out[k] = out.get(k, 0.0) + v
+    return out
+
+
+# ---------- frente X ----------
+
+def add_tweet(week_start: str, text: str, payload: dict, post_id: int | None = None) -> int:
+    return execute("INSERT INTO tweets (week_start, post_id, status, text, payload, created_at) VALUES (?,?,?,?,?,?)",
+                   week_start, post_id, "review", text, json.dumps(payload, ensure_ascii=False), now())
+
+
+def tweet(tweet_id: int) -> dict:
+    t = row("SELECT * FROM tweets WHERE id = ?", tweet_id)
+    t["payload"] = json.loads(t["payload"] or "{}")
+    t["buffer"] = json.loads(t["buffer"]) if t.get("buffer") else {}
+    return t
+
+
+def update_tweet(tweet_id: int, **fields: Any) -> None:
+    for k, v in fields.items():
+        if isinstance(v, (dict, list)):
+            fields[k] = json.dumps(v, ensure_ascii=False)
+    sets = ", ".join(f"{k} = ?" for k in fields)
+    execute(f"UPDATE tweets SET {sets} WHERE id = ?", *fields.values(), tweet_id)
+
+
+def week_tweets(week_start: str) -> list[dict]:
+    """Tweets da semana que contam na cota (descartados não contam)."""
+    return rows("SELECT id, status, post_id, text FROM tweets WHERE week_start = ? AND status != 'discarded' "
+                "ORDER BY id", week_start)
+
+
+def recent_tweets(limit: int = 30) -> list[str]:
+    return [r["text"] for r in rows("SELECT text FROM tweets WHERE status != 'discarded' ORDER BY id DESC LIMIT ?", limit)]
+
+
+def get_setting(key: str, default: str | None = None) -> str | None:
+    r = row("SELECT value FROM settings WHERE key = ?", key)
+    return r["value"] if r else default
+
+
+def set_setting(key: str, value: str) -> None:
+    execute("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            key, str(value))

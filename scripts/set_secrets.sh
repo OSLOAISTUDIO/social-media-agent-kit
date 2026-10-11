@@ -1,6 +1,7 @@
 #!/bin/zsh
-# Grava as chaves do agente nas variáveis do Railway. Uso: ./scripts/set_secrets.sh [serviço]
-# (padrão: "agent"). Roda no projeto Railway linkado na pasta (railway link).
+# Grava as chaves do agente nas variáveis do Railway. Uso: ./scripts/set_secrets.sh [serviço] [CHAVE ...]
+# (serviço padrão: "agent"). Roda no projeto Railway linkado na pasta (railway link).
+# Com chaves no fim, pergunta só por elas (ex.: na atualização: ./scripts/set_secrets.sh agent ANTHROPIC_API_KEY).
 # Cada valor é digitado aqui com a digitação oculta e vai direto para o Railway via stdin:
 # não aparece na tela, no histórico do terminal nem em arquivo. Enter vazio pula a chave.
 set -e
@@ -12,11 +13,13 @@ KEYS=(
   TELEGRAM_BOT_TOKEN
   TELEGRAM_ALLOWED_CHAT_IDS
   OPENAI_API_KEY
+  ANTHROPIC_API_KEY
   APIFY_TOKEN
   BUFFER_API_KEY
   SUPABASE_URL
   SUPABASE_SERVICE_KEY
 )
+(( $# > 1 )) && KEYS=("${@:2}")
 
 echo "Railway: $(railway whoami --json | python3 -c 'import sys,json; print(json.load(sys.stdin)["email"])')"
 echo "Cole cada valor e tecle Enter (nada aparece enquanto digita). Enter vazio pula.\n"

@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 
-from . import db
+from . import db, watchdog
 from .bot import build_app
 from .config import BRAND_NAME, cfg
 
@@ -32,9 +32,14 @@ def main() -> None:
     db.init()
     if cfg.can_publish():
         logging.warning("Publicação desativada até configurar: %s", ", ".join(cfg.can_publish()))
+    if not cfg.anthropic_api_key:
+        logging.warning("ANTHROPIC_API_KEY ausente: Revisor (Claude Sonnet) e Agent Vídeo (Claude Opus) desligados.")
+    else:
+        logging.info("Revisor: %s (%s) · Agent Vídeo: %s (%s)", cfg.reviewer, cfg.reviewer_model, cfg.video_mode, cfg.video_model)
     if not cfg.apify_token:
         logging.warning("APIFY_TOKEN ausente: pesquisa usa só Hacker News, Google News e web search.")
     logging.info("Agent de social media no ar · marca %s (%s) · modelo %s", BRAND_NAME, cfg.brand_slug, cfg.model)
+    watchdog.start()
     build_app().run_polling(allowed_updates=["message", "callback_query"])
 
 

@@ -241,6 +241,11 @@ h1, h2, .big, .metric, .statement { font-family: "{{ v.font_display }}", "{{ v.f
       </div>
       {% if s.body %}<div class="grid" style="margin-top: 24px;"><p class="body c1-4">{{ s.body }}</p></div>{% endif %}
 
+    {% elif s.layout == 'motion' %}
+      {# Slide animado do Agent Vídeo: CSS @keyframes do modelo; aqui o quadro final (pôster) #}
+      <div class="motion" data-seconds="{{ s.motion_seconds or 8 }}" style="margin-top: 40px; position: relative; width: 888px; height: {{ 640 if story else 544 }}px; overflow: hidden;">{{ s.motion_html|safe }}</div>
+      {% if s.body %}<div class="grid" style="margin-top: 24px;"><p class="body c1-4">{{ s.body }}</p></div>{% endif %}
+
     {% elif s.layout == 'line' %}
       {% if s.big %}
       <div class="grid" style="margin-top: 56px; align-items: end;">
@@ -303,8 +308,17 @@ function fitTitles() {
   });
 }
 
+// Slide animado: a peça estática (PNG e PDF) mostra o último quadro da animação.
+function freezeMotion() {
+  document.querySelectorAll(".motion").forEach(m => {
+    const ms = parseFloat(m.dataset.seconds || "8") * 1000 - 1;
+    m.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = ms; });
+  });
+}
+
 // Reduz números grandes até caberem na coluna (sem quebrar o grid).
 function fit() {
+  freezeMotion();
   fitTitles();
   document.querySelectorAll("[data-fit]").forEach(e => {
     let size = parseFloat(getComputedStyle(e).fontSize);

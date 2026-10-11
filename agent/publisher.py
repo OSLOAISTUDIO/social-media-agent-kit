@@ -3,6 +3,7 @@
 Buffer (API GraphQL, inclusa no plano gratuito):
   Instagram  carrossel (várias imagens) + stories com os mesmos slides do feed, um por quadro
   LinkedIn   carrossel em PDF (documento nativo do LinkedIn) ou imagens (LINKEDIN_FORMAT)
+  X          tweets de texto (frente X, agent/xarm.py), canal "twitter" do Buffer
   Plano gratuito: 10 posts agendados por canal ao mesmo tempo. Um post completo usa 1 carrossel
   + 1 story por slide no Instagram; antes de agendar, a fila é conferida para nunca publicar
   pela metade (BUFFER_QUEUE_LIMIT).
@@ -26,19 +27,29 @@ DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
 # ---------- quando publicar ----------
 
-def next_slot(after: datetime | None = None) -> datetime:
+def next_slot(after: datetime | None = None, slots: list[str] | None = None) -> datetime:
+    """Próximo horário da grade. Slot "TUE 10:00" = toda terça; "12:30" = todo dia (grade do X)."""
     tz = ZoneInfo(cfg.timezone)
     now = after or datetime.now(tz)
     candidates = []
-    for slot in cfg.slots:
-        day, hm = slot.split()
-        h, m = map(int, hm.split(":"))
-        delta = (DAYS.index(day.upper()) - now.weekday()) % 7
-        dt = (now + timedelta(days=delta)).replace(hour=h, minute=m, second=0, microsecond=0)
-        if dt <= now + timedelta(minutes=15):
-            dt += timedelta(days=7)
+    for slot in slots or cfg.slots:
+        parts = slot.split()
+        h, m = map(int, parts[-1].split(":"))
+        if len(parts) == 1:
+            dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
+            if dt <= now + timedelta(minutes=15):
+                dt += timedelta(days=1)
+        else:
+            delta = (DAYS.index(parts[0].upper()) - now.weekday()) % 7
+            dt = (now + timedelta(days=delta)).replace(hour=h, minute=m, second=0, microsecond=0)
+            if dt <= now + timedelta(minutes=15):
+                dt += timedelta(days=7)
         candidates.append(dt)
     return min(candidates)
+
+
+def next_x_slot(after: datetime | None = None) -> datetime:
+    return next_slot(after, cfg.x_slots)
 
 
 def asap() -> datetime:
@@ -79,7 +90,8 @@ def to_jpeg(png: Path, width: int | None = 1080) -> Path:
 
 
 async def upload(client: httpx.AsyncClient, path: Path, key: str) -> str:
-    ctype = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}.get(path.suffix, "image/png")
+    ctype = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+             ".mp4": "video/mp4"}.get(path.suffix, "image/png")
     r = await client.post(
         f"{cfg.supabase_url}/storage/v1/object/{cfg.supabase_bucket}/{key}",
         content=path.read_bytes(),
@@ -132,16 +144,18 @@ async def _gql(client: httpx.AsyncClient, query: str, variables: dict | None = N
 
 
 async def buffer_channels(client: httpx.AsyncClient) -> dict[str, str]:
-    """{'instagram': id, 'linkedin': id}. IDs fixos no .env têm prioridade."""
-    found = {k: v for k, v in {"instagram": cfg.buffer_instagram_channel, "linkedin": cfg.buffer_linkedin_channel}.items() if v}
-    if len(found) == 2:
+    """{'instagram': id, 'linkedin': id, 'twitter': id}. IDs fixos no .env têm prioridade."""
+    found = {k: v for k, v in {"instagram": cfg.buffer_instagram_channel, "linkedin": cfg.buffer_linkedin_channel,
+                               "twitter": cfg.buffer_x_channel}.items() if v}
+    if len(found) == 3:
         return found
     orgs = (await _gql(client, "{ account { organizations { id name } } }"))["account"]["organizations"]
     for org in orgs:
         chans = (await _gql(client, "query($i: ChannelsInput!) { channels(input: $i) { id service name isLocked isDisconnected } }",
                             {"i": {"organizationId": org["id"]}}))["channels"]
         for c in chans:
-            if c["service"] in ("instagram", "linkedin") and c["service"] not in found and not (c["isLocked"] or c["isDisconnected"]):
+            if c["service"] in ("instagram", "linkedin", "twitter") and c["service"] not in found \
+                    and not (c["isLocked"] or c["isDisconnected"]):
                 found[c["service"]] = c["id"]
     return found
 
@@ -193,7 +207,8 @@ async def _buffer_post(client: httpx.AsyncClient, channel: str, text: str, asset
 
 
 async def publish_buffer(c: dict, feed_urls: list[str], story_urls: list[str], pdf_url: str | None,
-                         when: datetime, now: bool = False, li_urls: list[str] | None = None) -> list[dict]:
+                         when: datetime, now: bool = False, li_urls: list[str] | None = None,
+                         video: dict | None = None) -> list[dict]:
     out = []
     async with httpx.AsyncClient(timeout=120, headers={"Authorization": f"Bearer {cfg.buffer_api_key}"}) as bf:
         ch = await buffer_channels(bf)
@@ -210,9 +225,18 @@ async def publish_buffer(c: dict, feed_urls: list[str], story_urls: list[str], p
 
         due = None if now else when
         if "instagram" in cfg.networks:
-            out.append({"label": "Instagram feed", **await _buffer_post(
-                bf, ch["instagram"], c["caption_instagram"], [{"image": {"url": u}} for u in feed_urls], due,
-                {"instagram": {"type": "post", "shouldShareToFeed": True}})})
+            ig_meta = {"instagram": {"type": "post", "shouldShareToFeed": True}}
+            images = [{"image": {"url": u}} for u in feed_urls]
+            assets = feed_assets(feed_urls, video)
+            try:
+                post = await _buffer_post(bf, ch["instagram"], c["caption_instagram"], assets, due, ig_meta)
+            except RuntimeError as e:
+                if assets == images:
+                    raise
+                # carrossel com vídeo recusado: sai só com imagens (o slide animado vira o pôster)
+                log.warning("carrossel com vídeo falhou (%s); publicando só com imagens", e)
+                post = await _buffer_post(bf, ch["instagram"], c["caption_instagram"], images, due, ig_meta)
+            out.append({"label": "Instagram feed", **post})
             # Stories na mesma ordem do carrossel, 1 minuto entre cada quadro.
             for i, u in enumerate(story_urls, 1):
                 out.append({"label": f"Story {i}", **await _buffer_post(
@@ -233,6 +257,48 @@ async def publish_buffer(c: dict, feed_urls: list[str], story_urls: list[str], p
             else:
                 out.append({"label": "LinkedIn", **await _buffer_post(bf, ch["linkedin"], c["caption_linkedin"], images, due)})
     return out
+
+
+def feed_assets(feed_urls: list[str], video: dict | None) -> list[dict]:
+    """Imagens do carrossel; o slide animado (se houver) entra como vídeo, com a peça estática de capa."""
+    assets = [{"image": {"url": u}} for u in feed_urls]
+    if video and video.get("url") and 0 <= video["index"] < len(assets):
+        poster = feed_urls[video["index"]]
+        assets[video["index"]] = {"video": {"url": video["url"], "thumbnailUrl": poster}}
+    return assets
+
+
+async def publish_tweet(tweet_id: int, when: datetime, now: bool = False) -> dict:
+    """Agenda (ou publica na hora) um tweet aprovado no canal X do Buffer."""
+    if not cfg.buffer_api_key:
+        raise RuntimeError("Falta BUFFER_API_KEY para publicar no X.")
+    t = db.tweet(tweet_id)
+    async with httpx.AsyncClient(timeout=60, headers={"Authorization": f"Bearer {cfg.buffer_api_key}"}) as bf:
+        ch = await buffer_channels(bf)
+        if "twitter" not in ch:
+            raise RuntimeError("Canal do X não conectado no Buffer (conecte em buffer.com > Channels).")
+        if not now:
+            await _buffer_queue_check(bf, ch["twitter"], 1, "X")
+        post = await _buffer_post(bf, ch["twitter"], t["text"], [], None if now else when)
+    out = {"via": "buffer", "when": when.isoformat(), "posts": [{"label": "X", **post}]}
+    db.update_tweet(tweet_id, status="published", buffer=out, published_at=db.now())
+    return out
+
+
+async def verify_tweet(tweet_id: int) -> dict:
+    """Status do tweet no Buffer: sent | error | scheduled | sending."""
+    t = db.tweet(tweet_id)
+    pid = (t["buffer"].get("posts") or [{}])[0].get("id")
+    async with httpx.AsyncClient(timeout=60, headers={"Authorization": f"Bearer {cfg.buffer_api_key}"}) as bf:
+        ch = await buffer_channels(bf)
+        orgs = (await _gql(bf, "{ account { organizations { id } } }"))["account"]["organizations"]
+        found = {}
+        for org in orgs:
+            d = await _gql(bf, POSTS_Q, {"i": {"organizationId": org["id"], "filter": {"channelIds": [ch["twitter"]]}}})
+            found |= {e["node"]["id"]: e["node"] for e in d["posts"]["edges"]}
+    n = found.get(pid, {})
+    return {"id": pid, "status": n.get("status", "desconhecido"), "link": n.get("externalLink"),
+            "error": (n.get("error") or {}).get("message")}
 
 
 # ---------- Metricool (alternativa, exige plano pago com API) ----------
@@ -312,11 +378,17 @@ async def publish(post_id: int, when: datetime, now: bool = False) -> dict:
         li_urls = None
         if cfg.publisher == "buffer" and "linkedin" in cfg.networks:
             li_urls = [await upload(st, j, f"{prefix}/linkedin/{j.name}") for j in (to_jpeg(f, None) for f in feed)]
+        # Slide animado do Agent Vídeo: MP4 no lugar da imagem estática do carrossel do Instagram
+        video = None
+        rv = c["_render"].get("video")
+        if cfg.publisher == "buffer" and rv and rv.get("mp4") and Path(rv["mp4"]).exists():
+            mp4 = Path(rv["mp4"])
+            video = {"index": rv["index"], "url": await upload(st, mp4, f"{prefix}/feed/{mp4.name}")}
 
     if cfg.publisher == "metricool":
         posts = await publish_metricool(c, feed_urls, story_urls, when)
     else:
-        posts = await publish_buffer(c, feed_urls, story_urls, pdf_url, when, now=now, li_urls=li_urls)
+        posts = await publish_buffer(c, feed_urls, story_urls, pdf_url, when, now=now, li_urls=li_urls, video=video)
 
     out = {"via": cfg.publisher, "when": when.isoformat(), "posts": posts, "stories": len(story_urls)}
     db.update_post(post_id, status="published", metricool=out, published_at=db.now())
@@ -406,7 +478,8 @@ def archive(post_id: int) -> Path:
     src = Path(p["render_dir"])
     for sub in ("feed", "storie"):
         if (src / sub).exists():
-            shutil.copytree(src / sub, dest / sub, dirs_exist_ok=True)
+            shutil.copytree(src / sub, dest / sub, dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("*-frames"))
     for f in ("pecas.html", "stories.html", "carrossel.pdf", f"{c['slug']}.pdf"):
         if (src / f).exists():
             shutil.copy2(src / f, dest / f)

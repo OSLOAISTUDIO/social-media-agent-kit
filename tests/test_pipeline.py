@@ -15,6 +15,7 @@ from agent.models import EditorialReview, PostContent, TopicProposal  # noqa: E4
 here = Path(__file__).parent
 sample = json.loads((here / "sample_post.json").read_text())
 sample.pop("pillar")
+sample.pop("_nota", None)
 
 TOPIC = TopicProposal(
     title="Tema de exemplo", headline="Título de exemplo", why_now="Teste.",
@@ -28,7 +29,7 @@ TOPIC = TopicProposal(
 
 
 async def fake_image(prompt, out_path, **kw):
-    assert kw.get("model") == "gpt-image-2" and "ENTRADA" in prompt, kw
+    assert kw.get("model") == "gpt-image-2" and "ERP E CRM" in prompt, kw
     from agent.illustration import REFERENCE
     if REFERENCE.exists():  # marcas sem imagem de referência geram só pelo texto de estilo
         assert kw.get("reference") and Path(kw["reference"]).name == REFERENCE.name, "referência de estilo"

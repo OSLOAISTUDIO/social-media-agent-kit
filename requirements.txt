@@ -9,3 +9,5 @@ feedparser>=6.0
 tzdata>=2024.1
 pillow>=10.4
 youtube-transcript-api>=1.2
+anthropic>=1.13
+imageio-ffmpeg>=0.6

@@ -28,6 +28,15 @@ async def main():
             r = await c.get(f"https://api.openai.com/v1/models/{m}", headers={"Authorization": f"Bearer {cfg.openai_api_key}"})
             ok(f"OpenAI {m}", r.status_code == 200, "" if r.status_code == 200 else f"HTTP {r.status_code}")
 
+        # Anthropic (Revisor e Agent Vídeo): modelos configurados existem na conta?
+        if cfg.anthropic_api_key:
+            for m in {cfg.reviewer_model, cfg.video_model}:
+                r = await c.get(f"https://api.anthropic.com/v1/models/{m}",
+                                headers={"x-api-key": cfg.anthropic_api_key, "anthropic-version": "2023-06-01"})
+                ok(f"Claude {m}", r.status_code == 200, "" if r.status_code == 200 else f"HTTP {r.status_code}")
+        else:
+            ok("Claude (Revisor e Agent Vídeo)", False, "ANTHROPIC_API_KEY ausente: os dois agentes ficam desligados")
+
         # Apify
         r = await c.get("https://api.apify.com/v2/users/me", headers={"Authorization": f"Bearer {cfg.apify_token}"})
         ok("Apify", r.status_code == 200, r.json().get("data", {}).get("plan", {}).get("id", "") if r.status_code == 200 else str(r.status_code))
@@ -59,6 +68,11 @@ async def main():
             ch = await publisher.buffer_channels(bf)
             for n in cfg.networks:
                 ok(f"Buffer {n}", n in ch, "conectado" if n in ch else "canal não encontrado no Buffer")
+            from agent import db, xarm
+            db.init()
+            if xarm.mode() != "off":
+                ok("Buffer X (twitter)", "twitter" in ch, "conectado" if "twitter" in ch else
+                   "frente X ligada, mas o canal do X não está conectado no Buffer")
         except Exception as e:
             ok("Buffer", False, str(e)[:160])
 

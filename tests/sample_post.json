@@ -1,257 +1,258 @@
 {
- "slug": "exemplo-de-post",
- "pillar": "Pilar 2",
- "caption_instagram": "Legenda de exemplo.",
- "caption_linkedin": "Legenda de exemplo.",
- "alt_text": "Capa de exemplo.",
- "photo_mood": "fotografia editorial, luz suave",
- "slides": [
-  {
-   "layout": "cover",
-   "tag": "Em alta",
-   "eyebrow": "Assunto do post",
-   "title": "Título de exemplo da capa.\nEm até três linhas.",
-   "lead": "Lead de exemplo: uma frase curta que aumenta a curiosidade sobre o tema do post.",
-   "body": null,
-   "big": null,
-   "metrics": null,
-   "items": null,
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "source": null,
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "big_number",
-   "eyebrow": "Dado",
-   "title": "Um número que resume o tema.",
-   "lead": null,
-   "body": "explicação curta do que o número significa para o público.",
-   "big": "−62%",
-   "metrics": null,
-   "items": null,
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": "Fonte: exemplo, 2026.",
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "line",
-   "eyebrow": "Evolução",
-   "title": "Duas séries ao longo do tempo.",
-   "lead": null,
-   "body": "valor final da série em destaque.",
-   "big": "0,40",
-   "metrics": null,
-   "items": null,
-   "bars": null,
-   "series": [
+  "slug": "exemplo-agentes-em-producao",
+  "pillar": "Pilar 2",
+  "caption_instagram": "Legenda de exemplo.",
+  "caption_linkedin": "Legenda de exemplo.",
+  "alt_text": "Fiorde ao entardecer.",
+  "photo_mood": "fiorde ao entardecer, luz baixa",
+  "slides": [
     {
-     "name": "Série A",
-     "values": [
-      10,
-      8,
-      6.5,
-      5,
-      3,
-      2.2,
-      1.4,
-      0.9,
-      0.4
-     ],
-     "highlight": true
+      "layout": "cover",
+      "tag": "Em alta",
+      "eyebrow": "Agentes de IA nas empresas",
+      "title": "O piloto acabou.\nAgora é operação.",
+      "lead": "O que os dados desta semana mostram sobre levar agentes de IA para produção, e o que isso exige da arquitetura.",
+      "body": null,
+      "big": null,
+      "metrics": null,
+      "items": null,
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "source": null,
+      "visual_brief": null,
+      "visual_labels": null
     },
     {
-     "name": "Série B",
-     "values": [
-      2,
-      2.5,
-      3,
-      4,
-      5.2,
-      6,
-      7.5,
-      8.4,
-      9.6
-     ],
-     "highlight": false
+      "layout": "big_number",
+      "eyebrow": "Adoção",
+      "title": "A maioria ainda não passou do teste.",
+      "lead": null,
+      "body": "das empresas que testaram agentes de IA ainda não colocaram nenhum em produção.",
+      "big": "−62%",
+      "metrics": null,
+      "items": null,
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": "Fonte: exemplo de teste, 2026.",
+      "visual_brief": null,
+      "visual_labels": null
+    },
+    {
+      "layout": "line",
+      "eyebrow": "Custo",
+      "title": "O preço por token caiu. O uso subiu mais.",
+      "lead": null,
+      "body": "queda no custo médio por milhão de tokens em 24 meses.",
+      "big": "US$ 0,40",
+      "metrics": null,
+      "items": null,
+      "bars": null,
+      "series": [
+        {
+          "name": "Custo",
+          "values": [
+            10,
+            8,
+            6.5,
+            5,
+            3,
+            2.2,
+            1.4,
+            0.9,
+            0.4
+          ],
+          "highlight": true
+        },
+        {
+          "name": "Uso",
+          "values": [
+            2,
+            2.5,
+            3,
+            4,
+            5.2,
+            6,
+            7.5,
+            8.4,
+            9.6
+          ],
+          "highlight": false
+        }
+      ],
+      "x_labels": [
+        "2024",
+        "2026"
+      ],
+      "tag": null,
+      "source": "Fonte: exemplo de teste.",
+      "visual_brief": null,
+      "visual_labels": null
+    },
+    {
+      "layout": "illustration",
+      "eyebrow": "Arquitetura",
+      "title": "Onde o agente se conecta à operação.",
+      "lead": null,
+      "body": "O agente decide com dados dos sistemas que a empresa já usa, dentro das permissões definidas.",
+      "big": null,
+      "metrics": null,
+      "items": null,
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": null,
+      "visual_brief": "Fluxo da esquerda para a direita: sistemas da empresa alimentam o agente de IA (em foco), que respeita uma camada de permissões e entrega uma decisão.",
+      "visual_labels": [
+        "ERP e CRM",
+        "Agente de IA",
+        "Permissões",
+        "Decisão"
+      ]
+    },
+    {
+      "layout": "bars",
+      "eyebrow": "Mercado",
+      "title": "Investimento em infraestrutura de IA.",
+      "lead": "Bilhões de dólares por trimestre, cinco maiores provedores.",
+      "body": null,
+      "big": null,
+      "metrics": null,
+      "items": null,
+      "bars": [
+        {
+          "label": "T1",
+          "value": 52,
+          "display": "52",
+          "highlight": false
+        },
+        {
+          "label": "T2",
+          "value": 61,
+          "display": "61",
+          "highlight": false
+        },
+        {
+          "label": "T3",
+          "value": 70,
+          "display": "70",
+          "highlight": false
+        },
+        {
+          "label": "T4",
+          "value": 88,
+          "display": "US$ 88 bi",
+          "highlight": true
+        }
+      ],
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": "Fonte: exemplo de teste.",
+      "visual_brief": null,
+      "visual_labels": null
+    },
+    {
+      "layout": "metrics",
+      "eyebrow": "Operação",
+      "title": "Onde o ganho aparece primeiro.",
+      "lead": null,
+      "body": "Ganhos medidos em operações com integração completa, não em pilotos isolados.",
+      "big": null,
+      "metrics": [
+        {
+          "value": "−38%",
+          "label": "tempo de atendimento"
+        },
+        {
+          "value": "3×",
+          "label": "volume processado por pessoa"
+        },
+        {
+          "value": "+21%",
+          "label": "precisão na triagem"
+        }
+      ],
+      "items": null,
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": "Fonte: exemplo de teste.",
+      "visual_brief": null,
+      "visual_labels": null
+    },
+    {
+      "layout": "statement",
+      "eyebrow": "Leitura Atlas",
+      "title": "O gargalo é a integração.",
+      "lead": "Agentes geram valor quando acessam os sistemas que a empresa já opera, com permissão, rastreabilidade e custo previsível.",
+      "body": "Sem essa camada, o agente vira mais uma ferramenta isolada.",
+      "big": null,
+      "metrics": null,
+      "items": null,
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": null,
+      "visual_brief": null,
+      "visual_labels": null
+    },
+    {
+      "layout": "list",
+      "eyebrow": "O que fazer",
+      "title": "Quatro decisões antes do primeiro agente.",
+      "lead": null,
+      "body": null,
+      "big": null,
+      "metrics": null,
+      "items": [
+        {
+          "title": "Escolha um processo com dono.",
+          "text": "Um fluxo com começo, fim e métrica clara."
+        },
+        {
+          "title": "Mapeie os sistemas envolvidos.",
+          "text": "ERP, CRM e bases internas definem o que o agente pode fazer."
+        },
+        {
+          "title": "Defina permissões e trilha de auditoria.",
+          "text": "Segurança entra na arquitetura desde o início."
+        },
+        {
+          "title": "Meça custo por tarefa.",
+          "text": "Previsibilidade é o que permite escalar."
+        }
+      ],
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": null,
+      "visual_brief": null,
+      "visual_labels": null
+    },
+    {
+      "layout": "cta",
+      "eyebrow": "Obrigado por ler até aqui",
+      "title": "Agentes em produção começam com diagnóstico.",
+      "lead": "A Atlas coloca agentes de IA em produção com segurança e resultado medido.",
+      "body": null,
+      "big": null,
+      "metrics": null,
+      "items": null,
+      "bars": null,
+      "series": null,
+      "x_labels": null,
+      "tag": null,
+      "source": null,
+      "visual_brief": null,
+      "visual_labels": null
     }
-   ],
-   "x_labels": [
-    "2024",
-    "2026"
-   ],
-   "tag": null,
-   "source": "Fonte: exemplo.",
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "illustration",
-   "eyebrow": "Como funciona",
-   "title": "Um processo em quatro etapas.",
-   "lead": null,
-   "body": "Legenda curta abaixo da ilustração.",
-   "big": null,
-   "metrics": null,
-   "items": null,
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": null,
-   "visual_brief": "Fluxo da esquerda para a direita em quatro etapas, com a terceira em destaque.",
-   "visual_labels": [
-    "Entrada",
-    "Etapa",
-    "Revisão",
-    "Resultado"
-   ]
-  },
-  {
-   "layout": "bars",
-   "eyebrow": "Comparação",
-   "title": "Quatro períodos lado a lado.",
-   "lead": "Valores de exemplo por período.",
-   "body": null,
-   "big": null,
-   "metrics": null,
-   "items": null,
-   "bars": [
-    {
-     "label": "T1",
-     "value": 52,
-     "display": "52",
-     "highlight": false
-    },
-    {
-     "label": "T2",
-     "value": 61,
-     "display": "61",
-     "highlight": false
-    },
-    {
-     "label": "T3",
-     "value": 70,
-     "display": "70",
-     "highlight": false
-    },
-    {
-     "label": "T4",
-     "value": 88,
-     "display": "88",
-     "highlight": true
-    }
-   ],
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": "Fonte: exemplo.",
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "metrics",
-   "eyebrow": "Resultados",
-   "title": "Três métricas em destaque.",
-   "lead": null,
-   "body": "Frase de apoio que conecta as métricas ao público.",
-   "big": null,
-   "metrics": [
-    {
-     "value": "−38%",
-     "label": "primeira métrica"
-    },
-    {
-     "value": "3×",
-     "label": "segunda métrica"
-    },
-    {
-     "value": "+21%",
-     "label": "terceira métrica"
-    }
-   ],
-   "items": null,
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": "Fonte: exemplo.",
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "statement",
-   "eyebrow": "Leitura da marca",
-   "title": "Uma ideia forte em uma frase.",
-   "lead": "Parágrafo curto com a leitura da marca sobre o tema, em linguagem simples e direta.",
-   "body": "Frase complementar opcional.",
-   "big": null,
-   "metrics": null,
-   "items": null,
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": null,
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "list",
-   "eyebrow": "O que fazer",
-   "title": "Quatro passos práticos.",
-   "lead": null,
-   "body": null,
-   "big": null,
-   "metrics": null,
-   "items": [
-    {
-     "title": "Passo 1.",
-     "text": "Explicação curta e acionável do passo."
-    },
-    {
-     "title": "Passo 2.",
-     "text": "Explicação curta e acionável do passo."
-    },
-    {
-     "title": "Passo 3.",
-     "text": "Explicação curta e acionável do passo."
-    },
-    {
-     "title": "Passo 4.",
-     "text": "Explicação curta e acionável do passo."
-    }
-   ],
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": null,
-   "visual_brief": null,
-   "visual_labels": null
-  },
-  {
-   "layout": "cta",
-   "eyebrow": "Obrigado por ler até aqui",
-   "title": "Convite para conhecer a marca.",
-   "lead": "Como a marca ajuda o público nesse contexto, em uma frase.",
-   "body": null,
-   "big": null,
-   "metrics": null,
-   "items": null,
-   "bars": null,
-   "series": null,
-   "x_labels": null,
-   "tag": null,
-   "source": null,
-   "visual_brief": null,
-   "visual_labels": null
-  }
- ]
+  ],
+  "_nota": "Exemplo de ESTRUTURA (layouts, campos, tamanhos de texto) usado pelos testes. Não é direção de conteúdo."
 }

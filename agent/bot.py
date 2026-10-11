@@ -7,6 +7,11 @@ Callbacks (botões):
   ok:<post>            aprovar post          adj:<post>   pedir ajustes
   pub:<post>:now|slot  publicar agora / no próximo horário sugerido
   when:<post>          escolher dia e horário (texto livre)   at:<post>:<epoch>  confirmar agendamento
+  cp:<post>            outra legenda         cd:<post>    direcionar a legenda
+  tw:<tweet>:ok|new|dir|no   aprovar / outro tweet / direcionar / descartar
+  twp:<tweet>:now|slot postar o tweet agora / no próximo horário do X     tww:<tweet>  escolher horário
+  twat:<tweet>:<epoch> confirmar agendamento do tweet              twr:<tweet>  tentar de novo
+  xs:<campo>:<valor>   configurações da frente X (/x)
 """
 from __future__ import annotations
 
@@ -24,7 +29,7 @@ from telegram.constants import ParseMode
 from telegram.error import NetworkError, RetryAfter, TimedOut
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
-from . import content, costs, db, llm, prompts, publisher, research
+from . import content, costs, db, llm, prompts, publisher, research, reviewer, video, watchdog, xarm
 from .config import BRAND_NAME, brand, cfg
 from .models import Intent, ScheduleParse
 
@@ -46,7 +51,11 @@ HELP = (
     "/pesquisar &lt;foco&gt;  refaz a pesquisa da semana com um direcionamento\n"
     "/status  situação da semana e custo\n"
     "/pendentes  reenvia posts esperando aprovação\n"
-    "/verificar  confere se o último post saiu em todas as redes\n\n"
+    "/verificar  confere se o último post saiu em todas as redes\n"
+    "/x  frente X (Twitter): ligar, desligar, só X, tweets por semana, linguagem e tom\n"
+    "/tweet &lt;assunto&gt;  pede um tweet de opinião\n\n"
+    "Antes de chegar a você, cada etapa passa pelo Revisor (Claude), e posts que ganham com movimento "
+    "recebem um slide animado do Agent Vídeo.\n\n"
     "Também pode escrever livremente (\"faz um post sobre X\") ou mandar um link, vídeo do YouTube ou texto "
     "de referência: nesse caso eu uso só o que você mandou."
 )
@@ -149,6 +158,7 @@ def topic_text(t: dict, label: str) -> str:
         f"<b>Pilar {e(BRAND_NAME)}</b> {e(p['pillar'])}",
         f"<b>Score</b> {total}/10 · viral {s['momentum']} · novidade {s.get('novelty', '—')} · "
         f"relevância {s['relevance']} · autoridade {s['ownability']}",
+        *([e(reviewer.topic_line(p["_review_topic"]))] if p.get("_review_topic") else []),
         "",
         "<b>Fontes para conferir</b>",
         *[f"• <a href=\"{e(src['url'])}\">{e(src['name'])}</a>{' · ' + e(src['date']) if src.get('date') else ''}"
@@ -165,7 +175,9 @@ def topic_kb(topic_id: int) -> Kb:
 
 def post_kb(post_id: int) -> Kb:
     return Kb([[Btn("✅ Aprovar post", callback_data=f"ok:{post_id}"),
-                Btn("✏️ Pedir ajustes", callback_data=f"adj:{post_id}")]])
+                Btn("✏️ Pedir ajustes", callback_data=f"adj:{post_id}")],
+               [Btn("📝 Outra legenda", callback_data=f"cp:{post_id}"),
+                Btn("🧭 Direcionar legenda", callback_data=f"cd:{post_id}")]])
 
 
 def when_kb(post_id: int) -> Kb:
@@ -177,13 +189,22 @@ def when_kb(post_id: int) -> Kb:
 # ---------------- ciclo semanal ----------------
 
 async def ask_week(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int | None = None):
+    chat_id = chat_id or db.resolve_chat(cfg.allowed_chat_ids[0])
+    xs = xarm.settings()
+    if xarm.mode() == "only":  # só X: a semana é de tweets, sem pergunta de posts
+        await say(ctx, chat_id, f"Bom dia. Semana da {e(BRAND_NAME)} no X: vou preparar {xs['per_week']} tweets de opinião "
+                                f"ao longo da semana (linguagem {e(xs['language'])}, tom {e(xs['tone'])}) e mando cada um "
+                                "para você aprovar. Mude em /x. Para um tweet agora: /tweet &lt;assunto&gt;.")
+        return
     w = db.get_or_create_week(week_start())
     db.update_week(w["id"], status="asking")
     kb = Kb([[Btn("1 post", callback_data="n:1"), Btn("2 posts", callback_data="n:2")],
              [Btn("Nenhum esta semana", callback_data="n:0")]])
     # Ciclo semanal vai só para o chat principal (o primeiro de TELEGRAM_ALLOWED_CHAT_IDS, ex.: o grupo).
-    await say(ctx, chat_id or db.resolve_chat(cfg.allowed_chat_ids[0]),
-              f"Bom dia. Começando a semana de conteúdo da {e(BRAND_NAME)}\n<b>Quantos posts faço esta semana?</b>", kb)
+    xline = (f"\nFrente X ligada: {xs['per_week']} tweets na semana, em paralelo (mude em /x)."
+             if xarm.mode() == "on" else "")
+    await say(ctx, chat_id, f"Bom dia. Começando a semana de conteúdo da {e(BRAND_NAME)}{xline}\n"
+                            "<b>Quantos posts faço esta semana?</b>", kb)
 
 
 async def weekly_job(ctx: ContextTypes.DEFAULT_TYPE):
@@ -202,7 +223,17 @@ async def run_research(ctx, chat_id: int, *, week_id: int | None, slots: int, di
         await say(ctx, chat_id, f"Apurando o assunto: <i>{e(request[:300])}</i>.")
     meter = costs.Meter()
     costs.current.set(meter)  # vale só para esta tarefa
+    brief = request or direction
+    # Revisor, etapa 0: afina o pedido antes de pesquisar (links e textos de referência seguem como vieram)
+    if direction:
+        direction = await reviewer.optimize_brief(direction, "direcionamento da pesquisa da semana")
+    if request and not research.is_reference(request):
+        request = await reviewer.optimize_brief(request, "pedido de post")
+    if (request or direction) != brief:
+        await say(ctx, chat_id, f"{e(reviewer.label())} afinou o pedido: <i>{e((request or direction)[:400])}</i>")
     res, refs = await research.research(n=research.candidates_for(slots), direction=direction, request=request)
+    # Revisor, etapa 1: dentro do tema-macro? o que a pesquisa diz está nas fontes? (1 ajuste por tema)
+    res, notes = await reviewer.screen_topics(res, refs)
     batch = f"{origin}-{uuid.uuid4().hex[:8]}"
     db.add_cost("research", batch, meter.as_dict())
     ids = []
@@ -211,7 +242,9 @@ async def run_research(ctx, chat_id: int, *, week_id: int | None, slots: int, di
         payload = cand.model_dump()
         if refs:  # referências enviadas: seguem com o tema até a escrita e a revisão (só elas valem)
             payload["_refs"] = refs[:12000]
-        ids.append(db.add_topic(week_id, payload, status, origin, batch, request or direction))
+        if notes[i]:
+            payload["_review_topic"] = notes[i]
+        ids.append(db.add_topic(week_id, payload, status, origin, batch, brief))
     if week_id:
         db.update_week(week_id, status="proposing")
     await say(ctx, chat_id, f"<b>Leitura da semana</b>\n{e(res.landscape)}")
@@ -270,20 +303,60 @@ async def send_preview(ctx, chat_id: int, post_id: int):
             media = [InputMediaPhoto(publisher.to_jpeg(Path(f)).read_bytes(), caption=name if j == 0 and k == 0 else None)
                      for j, f in enumerate(group[k:k + 10])]
             await part(name, lambda media=media: retry(lambda: ctx.bot.send_media_group(chat_id, media), attempts=2))
+    vid = c["_render"].get("video")
+    if vid and Path(vid["mp4"]).exists():
+        cap = f"Slide {vid['index'] + 1} animado: vai como vídeo no carrossel do Instagram (LinkedIn e stories usam a imagem)."
+        await part("vídeo", lambda: retry(lambda: ctx.bot.send_video(
+            chat_id, Path(vid["mp4"]).read_bytes(), caption=cap, supports_streaming=True, width=1080, height=1350),
+            attempts=2))
+    await send_captions(ctx, chat_id, c, part)
+    await send_approval(ctx, chat_id, post_id, failed)
+
+
+async def send_captions(ctx, chat_id: int, c: dict, part=None):
+    async def plain(label, call):
+        await call()
+    part = part or plain
     await part("legenda Instagram", lambda: say(ctx, chat_id, f"<b>Legenda Instagram</b>\n\n{e(c['caption_instagram'])}"))
     await part("legenda LinkedIn", lambda: say(ctx, chat_id, f"<b>Legenda LinkedIn</b>\n\n{e(c['caption_linkedin'])}"))
+
+
+def post_cost(p: dict) -> dict[str, float]:
+    """Custo do post por agente: pesquisa do tema + criação, ajustes, revisões, vídeo e legendas."""
+    t = db.topic(p["topic_id"])
+    research_split = db.cost_split("research", t["batch"]) if t.get("batch") else {}
+    return db.merge(research_split, db.topic_posts_split(p["topic_id"]))
+
+
+def cost_lines(split: dict[str, float]) -> str:
+    lines = f"Custo: {costs.split_line(split)}"
+    if reviewer.active() or split.get("reviewer"):
+        lines += f"\nGasto no {e(reviewer.label())}: <b>{costs.usd(split.get('reviewer', 0.0))}</b>"
+    return lines
+
+
+async def send_approval(ctx, chat_id: int, post_id: int, failed: list[str] | None = None):
+    p = db.post(post_id)
+    c = p["content"]
+    t = db.topic(p["topic_id"])
     warn = c["_render"].get("overflow")
     note = f"\n⚠️ Slides com texto apertado: {', '.join(warn)}" if warn else ""
     if failed:
         note += f"\n⚠️ Não chegou: {', '.join(dict.fromkeys(failed))}. Use /pendentes para reenviar a prévia."
-    c_research = db.cost("research", t.get("batch")) if t.get("batch") else 0.0
-    c_post = db.topic_posts_cost(p["topic_id"])
-    note += (f"\nCusto OpenAI: pesquisa {costs.usd(c_research)} · criação e ajustes {costs.usd(c_post)} · "
-             f"<b>total {costs.usd(c_research + c_post)}</b>")
     rv = c.get("_review")
     if rv and rv.get("scores"):
         status = "aprovado" if rv["approved"] else "com ressalvas"
         note += f"\nRevisão editorial: {status}, nota mínima {rv['min']}/10."
+    rvw = c.get("_reviewer") or {}
+    for stage, name in (("plan", "plano do post"), ("post", "post pronto"), ("captions", "legendas")):
+        if rvw.get(stage):
+            note += f"\n{e(reviewer.summary(rvw[stage]).replace(reviewer.label(), reviewer.label() + ' · ' + name))}"
+    v = c.get("_video")
+    if v and v.get("needed", True) and c["_render"].get("video"):
+        note += f"\nAgent Vídeo: slide animado ({e(v.get('reason', ''))})."
+    elif v and not v.get("needed", True):
+        note += f"\nAgent Vídeo: sem vídeo neste post ({e(v.get('reason', ''))})."
+    note += "\n" + cost_lines(post_cost(p))
     # As legendas não citam fontes: elas ficam aqui, para quem aprova conferir.
     srcs = post_sources(t["payload"], c)
     if srcs:
@@ -314,7 +387,7 @@ async def ask_when(ctx, chat_id: int, post_id: int):
                             "O horário sugerido segue a grade da semana; também dá para escolher outro.", when_kb(post_id))
 
 
-async def parse_when(ctx, chat_id: int, post_id: int, text: str):
+async def parse_when(ctx, chat_id: int, post_id: int, text: str, kind: str = "post"):
     now = datetime.now(TZ)
     r = await llm.structured("Você converte pedidos de agendamento em data e hora.", prompts.SCHEDULE.format(
         now=now.strftime("%Y-%m-%d %H:%M"), weekday=DIAS[now.weekday()], tz=cfg.timezone, text=text,
@@ -326,9 +399,15 @@ async def parse_when(ctx, chat_id: int, post_id: int, text: str):
         except ValueError:
             when = None
     if not when or when < now + timedelta(minutes=10):
-        db.set_awaiting(chat_id, "schedule", post_id)
+        db.set_awaiting(chat_id, "schedule" if kind == "post" else "tweet_when", post_id)
         await ask(ctx, chat_id, "Não entendi o horário (ou ele já passou). Pode escrever de novo? "
                                 "Ex.: \"quinta às 18h\", \"amanhã 9h\", \"15/10 12:30\".", "Dia e horário")
+        return
+    if kind == "tweet":
+        await say(ctx, chat_id, f"Agendo o tweet para <b>{fmt(when)}</b>?", Kb([
+            [Btn("✅ Confirmar", callback_data=f"twat:{post_id}:{int(when.timestamp())}")],
+            [Btn("📅 Escolher outro horário", callback_data=f"tww:{post_id}"),
+             Btn("🚀 Postar agora", callback_data=f"twp:{post_id}:now")]]))
         return
     await say(ctx, chat_id, f"Agendo para <b>{fmt(when)}</b>?", Kb([
         [Btn("✅ Confirmar", callback_data=f"at:{post_id}:{int(when.timestamp())}")],
@@ -374,8 +453,10 @@ async def do_publish(ctx, chat_id: int, post_id: int, mode: str, when: datetime 
         resumo = f"Publicando agora pelo {via}"
     else:
         resumo = f"Agendado no {via} para {fmt(when)}"
-    await say(ctx, chat_id, f"Feito. {resumo}: carrossel no Instagram, {out['stories']} stories "
-                            f"(mesmos slides do feed) e o post do LinkedIn ({len(out['posts'])} publicações).")
+    vid = " com o slide animado em vídeo" if p["content"]["_render"].get("video") else ""
+    await say(ctx, chat_id, f"Feito. {resumo}: carrossel no Instagram{vid}, {out['stories']} stories "
+                            f"(mesmos slides do feed) e o post do LinkedIn ({len(out['posts'])} publicações).\n"
+                            f"<b>Custo final do post</b>\n{cost_lines(post_cost(p))}")
     t = db.topic(p["topic_id"])
     if t["week_id"]:
         w = db.row("SELECT * FROM weeks WHERE id = ?", t["week_id"])
@@ -383,6 +464,190 @@ async def do_publish(ctx, chat_id: int, post_id: int, mode: str, when: datetime 
         if w["n_posts"] and done >= w["n_posts"]:
             db.update_week(w["id"], status="done")
             await say(ctx, chat_id, "Semana fechada. Se quiser mais um post, use /novopost.")
+
+
+async def regen_captions(ctx, chat_id: int, post_id: int, direction: str | None = None):
+    await say(ctx, chat_id, "Escrevendo outra legenda." if not direction else "Reescrevendo a legenda com o direcionamento.")
+    meter = costs.Meter()
+    costs.current.set(meter)
+    await content.new_captions(post_id, direction)
+    db.add_cost("post", post_id, meter.as_dict())
+    await send_captions(ctx, chat_id, db.post(post_id)["content"])
+    await send_approval(ctx, chat_id, post_id)
+
+
+# ---------------- frente X ----------------
+
+def tweet_text(tw: dict) -> str:
+    p = tw["payload"]
+    st = p.get("settings") or {}
+    lines = [f"<b>Tweet para aprovação</b>{' · sobre o post aprovado' if tw.get('post_id') else ''}", "",
+             e(tw["text"]), "",
+             f"<i>{len(tw['text'])}/{cfg.x_max_chars} caracteres · linguagem {e(st.get('language', '—'))} · "
+             f"tom {e(st.get('tone', '—'))}</i>"]
+    if p.get("angle"):
+        lines.append(f"<b>Opinião</b> {e(p['angle'])}")
+    if p.get("source_url", "").startswith("http"):
+        lines.append(f"<b>Fonte</b> <a href=\"{e(p['source_url'])}\">{e(p.get('source_name') or p['source_url'])}</a>")
+    if p.get("review"):
+        lines.append(e(reviewer.summary(p["review"])))
+    lines.append(cost_lines(db.cost_split("tweet", tw["id"])))
+    return "\n".join(lines)
+
+
+def tweet_kb(tid: int) -> Kb:
+    return Kb([[Btn("✅ Aprovar tweet", callback_data=f"tw:{tid}:ok")],
+               [Btn("🔄 Outro tweet", callback_data=f"tw:{tid}:new"), Btn("🧭 Direcionar", callback_data=f"tw:{tid}:dir")],
+               [Btn("✖️ Descartar", callback_data=f"tw:{tid}:no")]])
+
+
+def tweet_when_kb(tid: int) -> Kb:
+    return Kb([[Btn("🚀 Pode postar agora", callback_data=f"twp:{tid}:now")],
+               [Btn(f"🗓 {fmt(publisher.next_x_slot())}", callback_data=f"twp:{tid}:slot")],
+               [Btn("📅 Escolher dia e horário", callback_data=f"tww:{tid}")]])
+
+
+async def make_tweet(ctx, chat_id: int, seed: dict, direction: str | None = None, avoid: str | None = None):
+    meter = costs.Meter()
+    costs.current.set(meter)
+    tid = await xarm.write(seed, direction, avoid)
+    db.add_cost("tweet", tid, meter.as_dict())
+    await say(ctx, chat_id, tweet_text(db.tweet(tid)), tweet_kb(tid))
+
+
+async def do_publish_tweet(ctx, chat_id: int, tid: int, mode: str, when: datetime | None = None):
+    t = db.tweet(tid)
+    if t["status"] == "published":
+        await say(ctx, chat_id, "Esse tweet já foi enviado ao Buffer.")
+        return
+    when = when or (publisher.asap() if mode == "now" else publisher.next_x_slot())
+    try:
+        await publisher.publish_tweet(tid, when, now=mode == "now")
+    except publisher.QueueFull as ex:
+        await say(ctx, chat_id, f"{e(str(ex))}\nComo prefere seguir?", tweet_when_kb(tid))
+        return
+    base = datetime.now(TZ) if mode == "now" else when
+    ctx.application.job_queue.run_once(tweet_check_job, when=base + timedelta(minutes=3),
+                                       data={"chat_id": chat_id, "tweet_id": tid, "attempt": 0}, name=f"tw-{tid}")
+    resumo = "Publicando agora no X" if mode == "now" else f"Tweet agendado no X para {fmt(when)}"
+    await say(ctx, chat_id, f"Feito. {resumo} pelo Buffer.\n{cost_lines(db.cost_split('tweet', tid))}")
+
+
+async def tweet_check_job(context: ContextTypes.DEFAULT_TYPE):
+    d = context.job.data
+    try:
+        r = await publisher.verify_tweet(d["tweet_id"])
+    except Exception as ex:
+        log.warning("conferência do tweet %s falhou: %s", d["tweet_id"], ex)
+        r = {"status": "desconhecido"}
+    if r["status"] == "sent":
+        link = f" <a href=\"{e(r['link'])}\">ver</a>" if r.get("link") else ""
+        await say(context, d["chat_id"], f"✅ Tweet publicado no X.{link}")
+    elif r["status"] == "error":
+        db.update_tweet(d["tweet_id"], status="failed")
+        await say(context, d["chat_id"], f"⚠️ O tweet falhou no Buffer: {e(r.get('error') or 'sem detalhe')}",
+                  Kb([[Btn("🔁 Tentar de novo", callback_data=f"twr:{d['tweet_id']}")]]))
+    elif d["attempt"] < 6:
+        context.job_queue.run_once(tweet_check_job, when=timedelta(minutes=5),
+                                   data={**d, "attempt": d["attempt"] + 1}, name=f"tw-{d['tweet_id']}")
+
+
+async def x_daily_job(ctx: ContextTypes.DEFAULT_TYPE):
+    """Todo dia: completa a cota proporcional de tweets da semana (no máximo 3 por dia)."""
+    if xarm.mode() == "off" or not cfg.allowed_chat_ids:
+        return
+    chat = db.resolve_chat(cfg.allowed_chat_ids[0])
+    for _ in range(min(xarm.due_now(), 3)):
+        try:
+            await make_tweet(ctx, chat, xarm.seed_auto())
+        except Exception as ex:
+            log.error("tweet automático falhou:\n%s", traceback.format_exc())
+            await say(ctx, chat, f"Não consegui preparar o tweet do dia.\n<code>{e(str(ex))[:400]}</code>")
+            break
+
+
+def x_text() -> str:
+    st = xarm.settings()
+    done = len(db.week_tweets(xarm.week_key()))
+    lines = ["<b>Frente X (Twitter)</b>",
+             f"Modo: <b>{e(xarm.MODES.get(st['mode'], st['mode']))}</b>",
+             f"Tweets por semana: <b>{st['per_week']}</b> (esta semana: {done})",
+             f"Linguagem: <b>{e(st['language'])}</b> · Tom: <b>{e(st['tone'])}</b>",
+             f"Horários: {', '.join(cfg.x_slots)} · preparo diário às {cfg.x_time}", "",
+             "Ligado: cada post aprovado gera um tweet de opinião, e eu completo a cota na semana. "
+             "Só X: Instagram e LinkedIn ficam pausados. Todo tweet passa pelo Revisor e por você."]
+    return "\n".join(lines)
+
+
+def x_kb() -> Kb:
+    st = xarm.settings()
+    mark = lambda on, txt: f"● {txt}" if on else txt  # noqa: E731
+    langs = [Btn(mark(st["language"] == x, x), callback_data=f"xs:lang:{i}") for i, x in enumerate(xarm.LANGUAGES)]
+    tones = [Btn(mark(st["tone"] == x, x), callback_data=f"xs:tone:{i}") for i, x in enumerate(xarm.TONES)]
+    return Kb([
+        [Btn(mark(st["mode"] == k, t), callback_data=f"xs:mode:{k}") for k, t in
+         (("off", "Desligado"), ("on", "Ligado"), ("only", "Só X"))],
+        [Btn(mark(st["per_week"] == n, str(n)), callback_data=f"xs:n:{n}") for n in xarm.COUNTS],
+        langs[:3], langs[3:] + [Btn("Outra linguagem", callback_data="xs:lang:x")],
+        tones[:3], tones[3:] + [Btn("Outro tom", callback_data="xs:tone:x")],
+        [Btn("🐦 Gerar um tweet agora", callback_data="xs:gen:1")]])
+
+
+async def on_x_setting(update: Update, ctx: ContextTypes.DEFAULT_TYPE, field: str, value: str):
+    q = update.callback_query
+    chat_id = update.effective_chat.id
+    if field == "gen":
+        await q.edit_message_reply_markup(None)
+        await say(ctx, chat_id, "Preparando um tweet.")
+        background(ctx, chat_id, make_tweet(ctx, chat_id, xarm.seed_auto()), "escrever o tweet")
+        return
+    if field in ("lang", "tone") and value == "x":
+        db.set_awaiting(chat_id, "x_language" if field == "lang" else "x_tone")
+        await ask(ctx, chat_id, "Descreva a linguagem (ex.: \"irônica, frases curtas, gírias de tech\")." if field == "lang"
+                  else "Descreva o tom (ex.: \"contrarian, provocador, sem ser agressivo\").",
+                  "Linguagem" if field == "lang" else "Tom")
+        return
+    if field == "mode":
+        xarm.set_value("mode", value)
+    elif field == "n":
+        xarm.set_value("tweets_per_week", int(value))
+    elif field == "lang":
+        xarm.set_value("language", xarm.LANGUAGES[int(value)])
+    elif field == "tone":
+        xarm.set_value("tone", xarm.TONES[int(value)])
+    await q.edit_message_text(x_text(), parse_mode=ParseMode.HTML, reply_markup=x_kb())
+    if field == "mode":
+        msg = {"off": "Frente X desligada.",
+               "on": "Frente X ligada, em paralelo com Instagram e LinkedIn.",
+               "only": "Só X: Instagram e LinkedIn pausados (não pergunto posts na segunda)."}[value]
+        await say(ctx, chat_id, msg + ("" if value == "off" else
+                                       f" Vou preparar {xarm.settings()['per_week']} tweets por semana para você aprovar."))
+
+
+async def cmd_x(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if allowed(update):
+        await say(ctx, update.effective_chat.id, x_text(), x_kb())
+
+
+async def cmd_tweet(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if not allowed(update):
+        return
+    chat_id = update.effective_chat.id
+    brief = " ".join(ctx.args)
+    if not brief:
+        db.set_awaiting(chat_id, "tweet_request")
+        await ask(ctx, chat_id, "Sobre o que é o tweet? Pode mandar o assunto ou um link.", "Assunto do tweet")
+        return
+    await say(ctx, chat_id, "Preparando o tweet.")
+    background(ctx, chat_id, make_tweet(ctx, chat_id, xarm.seed_request(brief)), "escrever o tweet")
+
+
+async def tweet_from_post(ctx, chat_id: int, post_id: int):
+    """Frente X ligada: depois do OK no post, um tweet de opinião sobre o mesmo assunto."""
+    if db.row("SELECT id FROM tweets WHERE post_id = ? AND status != 'discarded'", post_id):
+        return
+    await say(ctx, chat_id, "Frente X: preparando um tweet de opinião sobre este assunto.")
+    await make_tweet(ctx, chat_id, xarm.seed_from_post(post_id))
 
 
 # ---------------- conferência da publicação ----------------
@@ -502,6 +767,14 @@ async def cmd_novopost(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not allowed(update):
         return
     brief = " ".join(ctx.args)
+    if xarm.mode() == "only":  # só X: pedido de post vira tweet
+        if not brief:
+            db.set_awaiting(update.effective_chat.id, "tweet_request")
+            await ask(ctx, update.effective_chat.id, "Modo só X. Sobre o que é o tweet?", "Assunto do tweet")
+            return
+        background(ctx, update.effective_chat.id, make_tweet(ctx, update.effective_chat.id, xarm.seed_request(brief)),
+                   "escrever o tweet")
+        return
     if not brief:
         db.set_awaiting(update.effective_chat.id, "request")
         await ask(ctx, update.effective_chat.id, "Sobre o que é o post? Pode mandar o assunto, um link ou um briefing.",
@@ -560,7 +833,11 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ts = db.week_topics(w["id"])
     lines = [f"<b>Semana de {w['week_start']}</b>", f"Posts pedidos: {w['n_posts'] or 'ainda não definido'}",
              f"Publicados/aprovados: {db.week_published_count(w['id'])}", f"Situação: {w['status']}",
-             f"Custo OpenAI na semana: {costs.usd(db.cost_since(w['week_start']))}"]
+             f"Custo na semana: {costs.split_line(db.split_since(w['week_start']))}"]
+    xs = xarm.settings()
+    if xarm.mode() != "off":
+        lines.append(f"Frente X: {e(xarm.MODES[xarm.mode()])} · {len(db.week_tweets(xarm.week_key()))} de "
+                     f"{xs['per_week']} tweets na semana")
     if w["direction"]:
         lines.append(f"Direcionamento: {e(w['direction'])}")
     lines += [f"• {e(t['title'])} ({t['status']})" for t in ts if t["status"] != "backlog"]
@@ -575,6 +852,9 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     chat_id = update.effective_chat.id
     kind, *args = q.data.split(":")
+    if kind == "xs":  # configurações do X: o cartão é atualizado no lugar
+        await on_x_setting(update, ctx, args[0], args[1])
+        return
     await q.edit_message_reply_markup(None)  # evita clique duplo
 
     if kind == "n":
@@ -628,6 +908,49 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif kind == "ok":
         db.update_post(int(args[0]), status="approved")
         await ask_when(ctx, chat_id, int(args[0]))
+        if xarm.mode() == "on":
+            background(ctx, chat_id, tweet_from_post(ctx, chat_id, int(args[0])), "escrever o tweet do post")
+
+    elif kind == "cp":
+        background(ctx, chat_id, regen_captions(ctx, chat_id, int(args[0])), "escrever outra legenda")
+
+    elif kind == "cd":
+        db.set_awaiting(chat_id, "caption", int(args[0]))
+        await ask(ctx, chat_id, "Como quer a legenda? Ex.: \"mais curta\", \"abre com o dado de custo\", "
+                                "\"tom mais leve\", \"chamada para o diagnóstico\".", "Direção da legenda")
+
+    elif kind == "tw":
+        tid, action = int(args[0]), args[1]
+        t = db.tweet(tid)
+        if action == "ok":
+            db.update_tweet(tid, status="approved")
+            await say(ctx, chat_id, "Tweet aprovado. <b>Posto agora ou agendo?</b>", tweet_when_kb(tid))
+        elif action == "new":
+            db.update_tweet(tid, status="discarded")
+            seed = {**t["payload"].get("seed", {}), "text": t["payload"].get("seed", {}).get("text", "")}
+            background(ctx, chat_id, make_tweet(ctx, chat_id, seed, avoid=t["text"]), "escrever outro tweet")
+        elif action == "dir":
+            db.set_awaiting(chat_id, "tweet_dir", tid)
+            await ask(ctx, chat_id, "Qual direção para o tweet? Ex.: \"mais ácido\", \"puxa para custo\", "
+                                    "\"discorda do hype\", \"fala com founders\".", "Direção do tweet")
+        else:
+            db.update_tweet(tid, status="discarded")
+            await say(ctx, chat_id, "Tweet descartado.")
+
+    elif kind == "twp":
+        background(ctx, chat_id, do_publish_tweet(ctx, chat_id, int(args[0]), args[1]), "publicar o tweet")
+
+    elif kind == "tww":
+        db.set_awaiting(chat_id, "tweet_when", int(args[0]))
+        await ask(ctx, chat_id, "Para quando? Ex.: \"hoje 18h\", \"amanhã 9h\", \"sexta 12:30\".", "Dia e horário")
+
+    elif kind == "twat":
+        when = datetime.fromtimestamp(int(args[1]), TZ)
+        background(ctx, chat_id, do_publish_tweet(ctx, chat_id, int(args[0]), "at", when), "agendar o tweet")
+
+    elif kind == "twr":
+        db.update_tweet(int(args[0]), status="approved")
+        background(ctx, chat_id, do_publish_tweet(ctx, chat_id, int(args[0]), "now"), "publicar o tweet")
 
     elif kind == "when":
         db.set_awaiting(chat_id, "schedule", int(args[0]))
@@ -691,9 +1014,30 @@ async def on_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if awaiting == "theme":
         background(ctx, chat_id, research_with_theme(ctx, chat_id, ref, text), "pesquisar o tema indicado")
         return
+    if awaiting == "caption":
+        background(ctx, chat_id, regen_captions(ctx, chat_id, ref, text), "reescrever a legenda")
+        return
+    if awaiting == "tweet_dir":
+        t = db.tweet(ref)
+        db.update_tweet(ref, status="discarded")
+        background(ctx, chat_id, make_tweet(ctx, chat_id, t["payload"].get("seed") or xarm.seed_auto(), direction=text,
+                                            avoid=t["text"]), "reescrever o tweet")
+        return
+    if awaiting == "tweet_when":
+        background(ctx, chat_id, parse_when(ctx, chat_id, ref, text, kind="tweet"), "entender o horário")
+        return
+    if awaiting == "tweet_request":
+        background(ctx, chat_id, make_tweet(ctx, chat_id, xarm.seed_request(text)), "escrever o tweet")
+        return
+    if awaiting in ("x_language", "x_tone"):
+        xarm.set_value("language" if awaiting == "x_language" else "tone", text[:120])
+        await say(ctx, chat_id, x_text(), x_kb())
+        return
 
     intent = await llm.structured(prompts.ROLE, prompts.INTENT.format(text=text), Intent, fast=True)
-    if intent.kind == "new_post":
+    if intent.kind == "new_post" and xarm.mode() == "only":
+        background(ctx, chat_id, make_tweet(ctx, chat_id, xarm.seed_request(intent.brief)), "escrever o tweet")
+    elif intent.kind == "new_post":
         background(ctx, chat_id, run_research(ctx, chat_id, week_id=None, slots=1, request=intent.brief,
                                               label_prefix="Proposta"), "apurar o pedido")
     elif intent.kind == "direction":
@@ -720,6 +1064,8 @@ def build_app() -> Application:
            # Padrões da biblioteca (5s de leitura, pool de 1 conexão) são curtos para enviar 18 imagens.
            .connect_timeout(20).read_timeout(60).write_timeout(60).media_write_timeout(180)
            .pool_timeout(30).connection_pool_size(16)
+           # getUpdates com request próprio para o vigia saber quando o polling para (agent/watchdog.py)
+           .get_updates_request(watchdog.PollingRequest(connect_timeout=20, read_timeout=30, pool_timeout=30))
            .post_init(reschedule_checks)
            .build())
     app.add_handler(CommandHandler(["start", "ajuda", "help"], cmd_start))
@@ -729,6 +1075,8 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("pendentes", cmd_pendentes))
     app.add_handler(CommandHandler("verificar", cmd_verificar))
+    app.add_handler(CommandHandler("x", cmd_x))
+    app.add_handler(CommandHandler("tweet", cmd_tweet))
     app.add_error_handler(on_error)
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
@@ -737,4 +1085,6 @@ def build_app() -> Application:
     h, m = map(int, cfg.weekly_time.split(":"))
     # No PTB, days vai de 0 = domingo a 6 = sábado; WEEKLY_DAY usa 0 = segunda.
     app.job_queue.run_daily(weekly_job, time=time(h, m, tzinfo=TZ), days=((cfg.weekly_day + 1) % 7,), name="weekly")
+    xh, xm = map(int, cfg.x_time.split(":"))
+    app.job_queue.run_daily(x_daily_job, time=time(xh, xm, tzinfo=TZ), name="x-daily")  # frente X: cota do dia
     return app
