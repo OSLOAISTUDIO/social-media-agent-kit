@@ -2,11 +2,14 @@
 páginas (web_fetch), custo por agente e fallback do servidor em caso de recusa.
 
 Sem ANTHROPIC_API_KEY, `enabled()` é falso e os dois agentes ficam desligados sem derrubar o fluxo.
+Sem crédito na conta (ou qualquer falha da API), o post segue sem eles e a prévia no Telegram avisa
+(`problem()`): o processo nunca para por causa da Anthropic.
 """
 from __future__ import annotations
 
 import base64
 import logging
+import time
 from pathlib import Path
 from typing import TypeVar
 
@@ -28,6 +31,34 @@ _client: anthropic.AsyncAnthropic | None = None
 
 class Unavailable(RuntimeError):
     """Claude não respondeu com o formato pedido (recusa, limite, rede). Quem chama segue sem o agente."""
+
+
+# Último problema da API (para o aviso no Telegram). Some na primeira chamada que der certo.
+_problem: dict = {"kind": None, "message": "", "at": 0.0}
+CREDIT_HINTS = ("credit balance", "billing", "purchase credits")
+
+
+def _set_problem(kind: str | None, message: str = "") -> None:
+    _problem.update(kind=kind, message=message, at=time.time() if kind else 0.0)
+
+
+def problem(max_age_s: int = 6 * 3600) -> dict | None:
+    """{'kind': 'credit' | 'error', 'message'} se a API falhou recentemente; None se está tudo certo."""
+    if _problem["kind"] and time.time() - _problem["at"] <= max_age_s:
+        return dict(_problem)
+    return None
+
+
+def notice() -> str:
+    """Aviso curto para o Telegram quando os agentes Claude não rodaram."""
+    p = problem()
+    if not p:
+        return ""
+    if p["kind"] == "credit":
+        return ("⚠️ API Anthropic sem crédito: Revisor e Agent Vídeo não rodaram (o post seguiu normalmente, "
+                "sem eles). Recarregue em platform.claude.com > Plans & Billing.")
+    return ("⚠️ API Anthropic indisponível agora: Revisor e Agent Vídeo não rodaram (o post seguiu normalmente, "
+            f"sem eles). Detalhe: {p['message'][:160]}")
 
 
 def enabled() -> bool:
@@ -84,9 +115,17 @@ async def structured(system: str, content: str | list, schema: type[T], *, model
                 break
             messages.append({"role": "assistant", "content": resp.content})
     except anthropic.APIStatusError as ex:
-        raise Unavailable(f"{model}: {ex.status_code} {getattr(ex, 'message', ex)}") from ex
+        msg = str(getattr(ex, "message", ex))
+        credit = any(h in msg.lower() for h in CREDIT_HINTS)
+        _set_problem("credit" if credit else "error", msg)
+        raise Unavailable(f"{model}: {'sem crédito na conta Anthropic' if credit else f'{ex.status_code} {msg}'}") from ex
     except anthropic.APIConnectionError as ex:
+        _set_problem("error", f"sem conexão ({ex})")
         raise Unavailable(f"{model}: sem conexão ({ex})") from ex
+    except Exception as ex:  # qualquer outra falha do SDK também não pode parar o post
+        _set_problem("error", f"{type(ex).__name__}: {ex}")
+        raise Unavailable(f"{model}: {type(ex).__name__}: {ex}") from ex
+    _set_problem(None)
 
     if resp.stop_reason == "refusal":
         cat = getattr(resp.stop_details, "category", None) if resp.stop_details else None

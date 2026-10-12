@@ -2,6 +2,15 @@
 
 Para atualizar uma instalação existente: [UPDATE.md](UPDATE.md) (em resumo, `./scripts/update.sh`).
 
+## 1.1.2 · 2026-10-11
+
+- **Anthropic sem crédito (ou fora do ar) nunca para o post.** O post, a pesquisa e os tweets seguem
+  normalmente, só sem Revisor e sem Agent Vídeo, e o Telegram avisa na prévia, no cartão do tweet,
+  depois da pesquisa e no `/status` ("API Anthropic sem crédito: ... recarregue em Plans & Billing").
+  Qualquer falha inesperada do cliente Claude também cai nesse caminho.
+- Regra de fonte nas legendas por marca (`prompts.CAPTIONS_CITE_SOURCES`; no kit, legendas sem fonte).
+- `PROMPT_INSTALACAO.md`: prompt pronto para instalar o agente numa empresa nova com o Claude Code.
+
 ## 1.1.1 · 2026-10-11
 
 - `update.sh` roda de qualquer pasta da instalação e também direto do GitHub, para quem ainda não tem o

@@ -148,7 +148,7 @@ POST = """Etapa: revisar o post pronto (texto e peças renderizadas em anexo), a
 Notas de 0 a 10 para: Capa (gancho e benefício em 2 segundos), Clareza e progressão, Utilidade
 prática, Precisão (todo número e fato bate com as fontes do tema), Tom e linguagem da marca,
 Visual (legibilidade, hierarquia, nada cortado ou apertado nas imagens), Legendas (abertura forte,
-chamada clara, sem citar fontes).
+chamada clara, {caption_rule}).
 Veredito "ajustar" se alguma nota ficar abaixo de 8 ou houver erro de precisão; nesse caso escreva o
 pedido único com tudo o que precisa mudar (slide a slide).
 
@@ -275,7 +275,8 @@ async def review_post(content: dict, topic: dict, images: list) -> PostCheck | N
     """Etapa 3. Lê o JSON do post e as peças do feed (imagens reduzidas)."""
     if not active():
         return None
-    text = POST.format(topic=json.dumps(_public(topic), ensure_ascii=False, indent=1),
+    text = POST.format(caption_rule=prompts.CAPTION_SOURCE_RULE,
+                       topic=json.dumps(_public(topic), ensure_ascii=False, indent=1),
                        post=json.dumps(_public_post(content), ensure_ascii=False, indent=1))
     blocks: list = [{"type": "text", "text": text}]
     for img in images[:10]:

@@ -29,7 +29,7 @@ from telegram.constants import ParseMode
 from telegram.error import NetworkError, RetryAfter, TimedOut
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
-from . import content, costs, db, llm, prompts, publisher, research, reviewer, video, watchdog, xarm
+from . import claude, content, costs, db, llm, prompts, publisher, research, reviewer, video, watchdog, xarm
 from .config import BRAND_NAME, brand, cfg
 from .models import Intent, ScheduleParse
 
@@ -247,6 +247,9 @@ async def run_research(ctx, chat_id: int, *, week_id: int | None, slots: int, di
         ids.append(db.add_topic(week_id, payload, status, origin, batch, brief))
     if week_id:
         db.update_week(week_id, status="proposing")
+    if claude.notice():
+        await say(ctx, chat_id, e(claude.notice().replace("Revisor e Agent Vídeo não rodaram",
+                                                          "o Revisor não conferiu os temas")))
     await say(ctx, chat_id, f"<b>Leitura da semana</b>\n{e(res.landscape)}")
     for i, tid in enumerate(ids[:slots], 1):
         label = f"{label_prefix} {i} de {slots}" if slots > 1 else label_prefix
@@ -357,6 +360,8 @@ async def send_approval(ctx, chat_id: int, post_id: int, failed: list[str] | Non
         note += f"\nAgent Vídeo: slide animado ({e(v.get('reason', ''))})."
     elif v and not v.get("needed", True):
         note += f"\nAgent Vídeo: sem vídeo neste post ({e(v.get('reason', ''))})."
+    if claude.notice():  # Anthropic sem crédito ou fora: o post seguiu sem Revisor e sem vídeo
+        note += "\n" + e(claude.notice())
     note += "\n" + cost_lines(post_cost(p))
     # As legendas não citam fontes: elas ficam aqui, para quem aprova conferir.
     srcs = post_sources(t["payload"], c)
@@ -494,6 +499,8 @@ def tweet_text(tw: dict) -> str:
         lines.append(f"<b>Fonte</b> <a href=\"{e(p['source_url'])}\">{e(p.get('source_name') or p['source_url'])}</a>")
     if p.get("review"):
         lines.append(e(reviewer.summary(p["review"])))
+    if claude.notice():
+        lines.append(e(claude.notice().replace("Revisor e Agent Vídeo não rodaram", "o Revisor não conferiu este tweet")))
     lines.append(cost_lines(db.cost_split("tweet", tw["id"])))
     return "\n".join(lines)
 
@@ -837,6 +844,12 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     lines = [f"<b>Semana de {w['week_start']}</b>", f"Posts pedidos: {w['n_posts'] or 'ainda não definido'}",
              f"Publicados/aprovados: {db.week_published_count(w['id'])}", f"Situação: {w['status']}",
              f"Custo na semana: {costs.split_line(db.split_since(w['week_start']))}"]
+    if not cfg.anthropic_api_key:
+        lines.append("Revisor e Agent Vídeo: desligados (falta ANTHROPIC_API_KEY)")
+    elif claude.problem():
+        lines.append(e(claude.notice()))
+    else:
+        lines.append(f"Revisor ({e(cfg.reviewer)}) e Agent Vídeo ({e(cfg.video_mode)}): prontos")
     xs = xarm.settings()
     if xarm.mode() != "off":
         lines.append(f"Frente X: {e(xarm.MODES[xarm.mode()])} · {len(db.week_tweets(xarm.week_key()))} de "

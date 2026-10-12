@@ -36,6 +36,12 @@ Regras inegociáveis:
 """ + "".join(f"- {r}\n" for r in V.get("rules", []))
 
 
+# Legendas citam a fonte principal no texto ("Fonte: ...")? Na OSLO. sim; no kit, as fontes ficam só no Telegram.
+CAPTIONS_CITE_SOURCES = False
+CAPTION_SOURCE_RULE = ("com a fonte principal citada no texto (\"Fonte: ...\")" if CAPTIONS_CITE_SOURCES else
+                       "sem citar fontes (as fontes ficam só na aprovação no Telegram)")
+
+
 def base_instructions() -> str:
     return f"{ROLE}\n\nHoje é {date.today().isoformat()}.\n\n# Base de conhecimento {BRAND_NAME}\n{core_knowledge()}"
 

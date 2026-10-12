@@ -18,7 +18,7 @@ temas de pesquisa, cores, fontes, logos, fotos, documentos) fica num **pacote de
 `brands/<slug>/`, escolhido pela variável `BRAND`. Cada empresa roda como uma instância separada,
 nas próprias contas.
 
-**Para instalar numa empresa, siga o [ONBOARDING.md](ONBOARDING.md).**
+**Para instalar numa empresa, siga o [ONBOARDING.md](ONBOARDING.md)** (ou cole o [PROMPT_INSTALACAO.md](PROMPT_INSTALACAO.md) numa sessão do Claude Code).
 
 ## Fluxo
 

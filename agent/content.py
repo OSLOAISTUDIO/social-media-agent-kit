@@ -247,7 +247,7 @@ async def revise(post_id: int, feedback: str) -> int:
 def _caption_problems(c: dict) -> list[str]:
     p = [v for v in language_violations(c) if v.startswith("- caption")]
     for cap in ("caption_instagram", "caption_linkedin"):
-        if re.search(r"\bfontes?\s*:", c.get(cap) or "", re.I):
+        if not prompts.CAPTIONS_CITE_SOURCES and re.search(r"\bfontes?\s*:", c.get(cap) or "", re.I):
             p.append(f"- {cap}: cita fonte (as fontes ficam só no Telegram)")
     return p
 
@@ -276,7 +276,7 @@ async def new_captions(post_id: int, direction: str | None = None) -> None:
                                     json.dumps(caps.model_dump(), ensure_ascii=False),
                                     f"Post: {base['post'][:6000]}\nOrientação do humano: {direction or '-'}",
                                     "legenda do Instagram curta e com abertura forte; LinkedIn mais analítica; "
-                                    "chamada final clara; sem citar fontes.")
+                                    f"chamada final clara; {prompts.CAPTION_SOURCE_RULE}.")
     note = None
     if rv:
         note = {"verdict": rv.verdict, "issues": rv.issues[:3], "applied": False}

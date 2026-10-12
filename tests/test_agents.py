@@ -104,6 +104,7 @@ async def fake_image(prompt, out_path, **kw):
     out_path.write_bytes((here / "fixtures" / "diagram.png").read_bytes())
 
 
+REAL_CLAUDE = claude.structured
 claude.structured = fake_claude
 llm.structured = fake_llm
 llm.generate_image = fake_image
@@ -228,12 +229,53 @@ async def test_x():
     print(f"frente X ok: cota 5/semana, tweet {len(t['text'])} caracteres revisado, agendado no canal X do Buffer")
 
 
+async def test_no_credit():
+    """API Anthropic sem crédito: o post sai inteiro, sem Revisor e sem vídeo, com aviso para o Telegram."""
+    import anthropic
+    import httpx2
+
+    def no_credit():
+        req = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+        return anthropic.BadRequestError(
+            "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to "
+            "upgrade or purchase credits.", response=httpx2.Response(400, request=req), body=None)
+
+    class Stream:
+        async def __aenter__(self):
+            raise no_credit()
+
+        async def __aexit__(self, *a):
+            return False
+
+    class Broke:  # parse (Revisor) e stream (Agent Vídeo) recusam por falta de crédito
+        async def parse(self, **kw):
+            raise no_credit()
+
+        def stream(self, **kw):
+            return Stream()
+
+    claude.structured = REAL_CLAUDE
+    claude._client = SimpleNamespace(beta=SimpleNamespace(messages=Broke()))
+    res, notes = await reviewer.screen_topics(ResearchResult(landscape="x", candidates=[topic("A")]))
+    assert notes == [None] and claude.problem()["kind"] == "credit"
+    tid = db.add_topic(None, topic("Sem crédito").model_dump(), "approved", "request", "b-credit", "teste")
+    pid = await content.create(tid)
+    c = db.post(pid)["content"]
+    assert db.post(pid)["status"] == "review" and len(c["_render"]["feed"]) == len(c["slides"])
+    assert not any(s["layout"] == "motion" for s in c["slides"]) and not c.get("_reviewer")
+    assert "sem crédito" in claude.notice() and "seguiu normalmente" in claude.notice()
+    claude.structured, claude._client = fake_claude, None
+    claude._set_problem(None)
+    print("sem crédito na Anthropic ok: post criado sem Revisor e sem vídeo, com aviso no Telegram")
+
+
 async def main():
     await test_screen_topics()
     pid = await test_create_with_reviewer_and_video()
     pid = await test_human_revision_keeps_video(pid)
     await test_captions(pid)
     await test_x()
+    await test_no_credit()
 
 
 asyncio.run(main())
