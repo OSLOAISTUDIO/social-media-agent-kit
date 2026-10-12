@@ -22,12 +22,12 @@ zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOTEAM/social-media-agent-k
 
 1. `update.sh` busca o kit, junta a versão nova com o histórico da empresa (git merge), instala as
    dependências, roda os testes, mostra o que mudou e, com `--push`, envia ao GitHub da empresa. Se
-   o Railway estiver conectado a esse repositório, o deploy começa sozinho. Sem `--push`, revise e
-   rode `git push origin HEAD` (ou `railway up --detach` se o Railway não estiver ligado ao GitHub).
+   a plataforma da empresa estiver ligada a esse repositório, o deploy começa sozinho. Sem `--push`,
+   revise e rode `git push origin HEAD` (ou o deploy manual da plataforma).
 2. `set_secrets.sh` com o nome das chaves pergunta só por elas (digitação oculta, direto no Railway)
    e reinicia o serviço. Faça isso só quando a versão trouxer variável obrigatória nova.
 
-Conferir depois: `railway logs` deve mostrar `Agent de social media no ar` e a linha do Revisor; no
+Conferir depois (nos logs da plataforma da empresa, ex.: `railway logs`) deve aparecer `Agent de social media no ar` e a linha do Revisor; no
 Telegram, `/status` e `/x`.
 
 ### Se der conflito
@@ -52,7 +52,7 @@ Cada release no GitHub traz o arquivo `.patch` da versão
 git init -q 2>/dev/null; git apply --3way social-media-agent-kit-v1.1.0.patch
 ~/.venvs/social-media-agent/bin/pip install -r requirements.txt
 ./run.sh test
-railway up --detach
+# depois, o deploy na plataforma da empresa (ex.: railway up --detach, na conta da empresa)
 ```
 
 ## Versões e o que cada uma pede

@@ -2,6 +2,12 @@
 
 Para atualizar uma instalação existente: [UPDATE.md](UPDATE.md) (em resumo, `./scripts/update.sh`).
 
+## 1.1.3 · 2026-10-11
+
+- Documentação: cada empresa sobe o agente na **própria** plataforma de backend (Railway, Render, Fly.io,
+  VPS ou outra), sem usar a conta ou o projeto de outra empresa. Railway continua como exemplo. Nenhum
+  código mudou, então não precisa atualizar a instalação só por causa desta versão.
+
 ## 1.1.2 · 2026-10-11
 
 - **Anthropic sem crédito (ou fora do ar) nunca para o post.** O post, a pesquisa e os tweets seguem

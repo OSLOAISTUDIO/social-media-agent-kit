@@ -187,7 +187,7 @@ tests/             teste do pipeline com APIs simuladas + render de amostra
 | Tweet (escrita + Revisor) | cerca de US$ 0,01 a 0,03 |
 | Apify (Google Trends, Reddit, X, Instagram) | cerca de US$ 0,35 a 0,50 por pesquisa; plano grátis de US$ 5/mês |
 | Buffer | grátis até 3 canais e 10 posts agendados por canal |
-| Railway | plano Hobby, cerca de US$ 5/mês |
+| Plataforma de backend da empresa (ex.: Railway, plano Hobby, cerca de US$ 5/mês) | um worker 24/7 |
 | Supabase | grátis |
 
 A prévia de cada post no Telegram mostra o custo real daquele post por agente, com o gasto do

@@ -42,9 +42,10 @@ O kit não traz tema de conteúdo pré-definido: o setup pergunta o **tema-macro
 | Supabase | hospedar as imagens para o Buffer | grátis |
 | Telegram | bot de aprovação + grupo do time | grátis |
 
-Se outra pessoa ou agência fizer a instalação, o cliente a convida como membro no Railway; as
-chaves são cadastradas por quem tem acesso, com o script de digitação oculta (passo 4), sem que
-ninguém precise ver as chaves.
+Cada empresa roda o agente na **própria** plataforma de backend (Railway, Render, Fly.io, VPS ou
+outra). Nunca use a conta ou o projeto de outra empresa, nem o da OSLO. Se outra pessoa ou agência
+fizer a instalação, a empresa a convida como membro da conta dela; as chaves são cadastradas por
+quem tem acesso, com o script de digitação oculta (passo 4), sem que ninguém precise vê-las.
 
 ## 2. Baixar o kit e criar o pacote
 
@@ -88,9 +89,12 @@ BRAND=<slug> ~/.venvs/social-media-agent/bin/python -m tests.render_sample
 
 6. Faça commit no repositório da empresa.
 
-## 3. Subir no Railway do cliente
+## 3. Subir na plataforma da empresa
 
-Com a conta do cliente logada (`railway login`), na pasta do projeto:
+O agente é um **worker** (sem porta HTTP, usa long polling do Telegram): precisa de um processo
+sempre ligado, variáveis de ambiente, um volume persistente em `/data` e deploy a partir do Dockerfile.
+Qualquer plataforma com isso serve. O exemplo abaixo é o Railway, com a conta **da empresa** logada
+(`railway whoami` confere antes de tudo):
 
 ```bash
 railway init --name <slug>-social-agent
@@ -100,6 +104,11 @@ railway variable set --skip-deploys BRAND=<slug> OPENAI_MODEL=gpt-6-luna OPENAI_
   OPENAI_ILLUSTRATION_MODEL=gpt-image-2 PUBLISHER=buffer TIMEZONE=America/Sao_Paulo
 railway up --detach -m "primeiro deploy <slug>"
 ```
+
+Em outra plataforma, crie o serviço a partir do Dockerfile do repositório da empresa, monte o volume
+em `/data`, cadastre as variáveis do `.env.example` e confira nos logs a linha `Agent de social media
+no ar`. Os scripts `set_secrets.sh`, `kickoff.py` e `buffer_status.py` usam o CLI do Railway: fora
+dele, cadastre as chaves pelo painel da plataforma (sem colar em chat).
 
 Sem as chaves, o serviço sobe e fica aguardando (não entra em loop de erro).
 
@@ -119,7 +128,7 @@ Sem as chaves, o serviço sobe e fica aguardando (não entra em loop de erro).
    tweets por semana, linguagem e tom).
 5. Conferir todas as conexões e criar o bucket público do Supabase:
    ```bash
-   railway run --service agent ~/.venvs/social-media-agent/bin/python -m scripts.check_setup --fix
+   ~/.venvs/social-media-agent/bin/python -m scripts.check_setup --fix   # com as variáveis carregadas (no Railway: railway run --service agent ...)
    ```
 
 ## 5. Primeiro ciclo
