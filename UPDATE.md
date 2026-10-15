@@ -17,7 +17,7 @@ Instalação que ainda não tem o `update.sh` (versões 1.0.x): rode a primeira 
 na pasta da instalação:
 
 ```bash
-zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOTEAM/social-media-agent-kit/main/scripts/update.sh) --push
+zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOAISTUDIO/social-media-agent-kit/main/scripts/update.sh) --push
 ```
 
 1. `update.sh` busca o kit, junta a versão nova com o histórico da empresa (git merge), instala as
@@ -46,7 +46,7 @@ Para desistir: `git merge --abort`. Personalização de marca deve ficar em `bra
 ## Sem git (pasta baixada como ZIP)
 
 Cada release no GitHub traz o arquivo `.patch` da versão
-(github.com/OSLOTEAM/social-media-agent-kit/releases). Na pasta da instalação:
+(github.com/OSLOAISTUDIO/social-media-agent-kit/releases). Na pasta da instalação:
 
 ```bash
 git init -q 2>/dev/null; git apply --3way social-media-agent-kit-v1.1.0.patch

@@ -7,7 +7,7 @@ colchetes.
 ---
 
 Quero instalar o Social Media Agent para a empresa [NOME DA EMPRESA], usando o kit público
-https://github.com/OSLOTEAM/social-media-agent-kit (última versão; veja VERSION e CHANGELOG.md).
+https://github.com/OSLOAISTUDIO/social-media-agent-kit (última versão; veja VERSION e CHANGELOG.md).
 Siga o ONBOARDING.md do kit do início ao fim e me peça só o que você não conseguir resolver sozinho.
 
 Contexto da empresa:

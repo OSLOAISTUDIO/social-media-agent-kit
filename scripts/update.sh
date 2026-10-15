@@ -3,7 +3,7 @@
 #
 # Uso:  ./scripts/update.sh            última versão publicada (branch main do kit)
 #       Primeira vez (instalação sem este script), na pasta da instalação:
-#       zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOTEAM/social-media-agent-kit/main/scripts/update.sh)
+#       zsh <(curl -fsSL https://raw.githubusercontent.com/OSLOAISTUDIO/social-media-agent-kit/main/scripts/update.sh)
 #       ./scripts/update.sh v1.1.0     uma versão específica (tag)
 #       ./scripts/update.sh --push     atualiza e já envia ao GitHub da empresa (o Railway faz o deploy)
 #
@@ -13,7 +13,7 @@
 set -e
 # Roda na raiz do repositório da instalação (também quando chamado pelo curl, sem arquivo local)
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-KIT_URL="https://github.com/OSLOTEAM/social-media-agent-kit.git"
+KIT_URL="https://github.com/OSLOAISTUDIO/social-media-agent-kit.git"
 VENV="$HOME/.venvs/social-media-agent"
 REF="main"; PUSH=0
 for a in "$@"; do

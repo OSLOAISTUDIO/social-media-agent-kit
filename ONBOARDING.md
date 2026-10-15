@@ -50,7 +50,7 @@ quem tem acesso, com o script de digitação oculta (passo 4), sem que ninguém 
 ## 2. Baixar o kit e criar o pacote
 
 ```bash
-git clone https://github.com/OSLOTEAM/social-media-agent-kit.git <pasta>
+git clone https://github.com/OSLOAISTUDIO/social-media-agent-kit.git <pasta>
 cd <pasta>
 ./run.sh setup
 ```
